@@ -1,0 +1,340 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.toolController = void 0;
+const models_1 = require("../models");
+const errors_1 = require("../utils/errors");
+const mongoose_1 = require("mongoose");
+const securityLogService_1 = require("../services/securityLogService");
+const MIN_PRICE = 0;
+const MAX_PRICE = 10000;
+const MIN_DESCRIPTION_LENGTH = 10;
+const MAX_DESCRIPTION_LENGTH = 1000;
+const MAX_IMAGES = 5;
+const VALID_CATEGORIES = [
+    "bricolage",
+    "jardinage",
+    "nettoyage",
+    "cuisine",
+    "électronique",
+    "autre",
+];
+exports.toolController = {
+    async createTool(req, res, next) {
+        var _a;
+        try {
+            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+                throw new errors_1.AuthenticationError("Non autorisé");
+            }
+            const toolData = {
+                ...req.body,
+                owner: new mongoose_1.Types.ObjectId(req.user.userId),
+            };
+            if (!toolData.name ||
+                !toolData.description ||
+                !toolData.category ||
+                !toolData.dailyPrice) {
+                throw new errors_1.ValidationError("Tous les champs sont requis", [
+                    { field: "name", message: "Le nom est requis" },
+                    { field: "description", message: "La description est requise" },
+                    { field: "category", message: "La catégorie est requise" },
+                    { field: "dailyPrice", message: "Le prix journalier est requis" },
+                ]);
+            }
+            if (toolData.name.length < 3) {
+                throw new errors_1.ValidationError("Le nom doit contenir au moins 3 caractères");
+            }
+            if (toolData.description.length < MIN_DESCRIPTION_LENGTH ||
+                toolData.description.length > MAX_DESCRIPTION_LENGTH) {
+                throw new errors_1.ValidationError(`La description doit contenir entre ${MIN_DESCRIPTION_LENGTH} et ${MAX_DESCRIPTION_LENGTH} caractères`);
+            }
+            if (!VALID_CATEGORIES.includes(toolData.category.toLowerCase())) {
+                throw new errors_1.ValidationError("Catégorie invalide");
+            }
+            if (toolData.dailyPrice < MIN_PRICE || toolData.dailyPrice > MAX_PRICE) {
+                throw new errors_1.ValidationError(`Le prix journalier doit être compris entre ${MIN_PRICE} et ${MAX_PRICE}`);
+            }
+            if (toolData.images && toolData.images.length > MAX_IMAGES) {
+                throw new errors_1.ValidationError(`Le nombre maximum d'images est de ${MAX_IMAGES}`);
+            }
+            if (toolData.availability) {
+                const { startDate, endDate } = toolData.availability;
+                const now = new Date();
+                if (startDate < now) {
+                    throw new errors_1.ValidationError("La date de début doit être dans le futur");
+                }
+                if (startDate >= endDate) {
+                    throw new errors_1.ValidationError("La date de début doit être antérieure à la date de fin");
+                }
+            }
+            if (toolData.location) {
+                const { coordinates } = toolData.location;
+                if (!coordinates ||
+                    coordinates.length !== 2 ||
+                    coordinates[0] < -180 ||
+                    coordinates[0] > 180 ||
+                    coordinates[1] < -90 ||
+                    coordinates[1] > 90) {
+                    throw new errors_1.ValidationError("Coordonnées géographiques invalides");
+                }
+            }
+            const tool = new models_1.Tool(toolData);
+            await tool.save();
+            await securityLogService_1.securityLogService.logEvent(new mongoose_1.Types.ObjectId(req.user.userId), "tool_created", "Nouvel outil créé");
+            const response = {
+                message: "Outil créé avec succès",
+                tool,
+            };
+            res.status(201).json(response);
+        }
+        catch (error) {
+            next(error);
+        }
+    },
+    async getTools(req, res, next) {
+        try {
+            const filters = req.query;
+            let query = {};
+            if (filters.category) {
+                if (!VALID_CATEGORIES.includes(filters.category.toLowerCase())) {
+                    throw new errors_1.ValidationError("Catégorie invalide");
+                }
+                query.category = filters.category.toLowerCase();
+            }
+            if (filters.minPrice || filters.maxPrice) {
+                query.dailyPrice = {};
+                if (filters.minPrice) {
+                    const minPrice = Number(filters.minPrice);
+                    if (minPrice < MIN_PRICE) {
+                        throw new errors_1.ValidationError(`Le prix minimum doit être supérieur à ${MIN_PRICE}`);
+                    }
+                    query.dailyPrice.$gte = minPrice;
+                }
+                if (filters.maxPrice) {
+                    const maxPrice = Number(filters.maxPrice);
+                    if (maxPrice > MAX_PRICE) {
+                        throw new errors_1.ValidationError(`Le prix maximum doit être inférieur à ${MAX_PRICE}`);
+                    }
+                    query.dailyPrice.$lte = maxPrice;
+                }
+            }
+            if (filters.status) {
+                if (!["available", "rented", "maintenance"].includes(filters.status)) {
+                    throw new errors_1.ValidationError("Statut invalide");
+                }
+                query.status = filters.status;
+            }
+            if (filters.startDate || filters.endDate) {
+                query.availability = {};
+                if (filters.startDate) {
+                    const startDate = new Date(filters.startDate);
+                    if (isNaN(startDate.getTime())) {
+                        throw new errors_1.ValidationError("Date de début invalide");
+                    }
+                    query.availability.startDate = { $lte: startDate };
+                }
+                if (filters.endDate) {
+                    const endDate = new Date(filters.endDate);
+                    if (isNaN(endDate.getTime())) {
+                        throw new errors_1.ValidationError("Date de fin invalide");
+                    }
+                    if (filters.startDate && endDate <= new Date(filters.startDate)) {
+                        throw new errors_1.ValidationError("La date de fin doit être après la date de début");
+                    }
+                    query.availability.endDate = { $gte: endDate };
+                }
+            }
+            if (filters.location && filters.radius) {
+                const [longitude, latitude] = filters.location.split(",").map(Number);
+                if (isNaN(longitude) ||
+                    isNaN(latitude) ||
+                    longitude < -180 ||
+                    longitude > 180 ||
+                    latitude < -90 ||
+                    latitude > 90) {
+                    throw new errors_1.ValidationError("Coordonnées géographiques invalides");
+                }
+                const radius = Number(filters.radius);
+                if (radius <= 0 || radius > 100) {
+                    throw new errors_1.ValidationError("Le rayon doit être compris entre 0 et 100 kilomètres");
+                }
+                query.location = {
+                    $near: {
+                        $geometry: {
+                            type: "Point",
+                            coordinates: [longitude, latitude],
+                        },
+                        $maxDistance: radius * 1000,
+                    },
+                };
+            }
+            const tools = await models_1.Tool.find(query)
+                .populate("owner", "firstName lastName email")
+                .sort({ createdAt: -1 });
+            const response = {
+                message: "Outils récupérés avec succès",
+                tools,
+            };
+            res.status(200).json(response);
+        }
+        catch (error) {
+            next(error);
+        }
+    },
+    async getToolById(req, res, next) {
+        try {
+            const { id } = req.params;
+            if (!id || !mongoose_1.Types.ObjectId.isValid(id)) {
+                throw new errors_1.ValidationError("ID d'outil invalide");
+            }
+            const tool = await models_1.Tool.findById(id)
+                .populate("owner", "firstName lastName email phone")
+                .populate({
+                path: "reviews",
+                populate: {
+                    path: "user",
+                    select: "firstName lastName",
+                },
+            });
+            if (!tool) {
+                throw new errors_1.DatabaseError("Outil non trouvé");
+            }
+            const response = {
+                message: "Outil récupéré avec succès",
+                tool,
+            };
+            res.status(200).json(response);
+        }
+        catch (error) {
+            next(error);
+        }
+    },
+    async updateTool(req, res, next) {
+        var _a;
+        try {
+            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+                throw new errors_1.AuthenticationError("Non autorisé");
+            }
+            const { id } = req.params;
+            if (!id || !mongoose_1.Types.ObjectId.isValid(id)) {
+                throw new errors_1.ValidationError("ID d'outil invalide");
+            }
+            const tool = await models_1.Tool.findById(id);
+            if (!tool) {
+                throw new errors_1.DatabaseError("Outil non trouvé");
+            }
+            if (tool.owner.toString() !== req.user.userId) {
+                throw new errors_1.AuthenticationError("Non autorisé à modifier cet outil");
+            }
+            if (tool.status === "rented") {
+                throw new errors_1.ValidationError("Impossible de modifier un outil en cours de location");
+            }
+            const updates = req.body;
+            if (updates.name && updates.name.length < 3) {
+                throw new errors_1.ValidationError("Le nom doit contenir au moins 3 caractères");
+            }
+            if (updates.description) {
+                if (updates.description.length < MIN_DESCRIPTION_LENGTH ||
+                    updates.description.length > MAX_DESCRIPTION_LENGTH) {
+                    throw new errors_1.ValidationError(`La description doit contenir entre ${MIN_DESCRIPTION_LENGTH} et ${MAX_DESCRIPTION_LENGTH} caractères`);
+                }
+            }
+            if (updates.category &&
+                !VALID_CATEGORIES.includes(updates.category.toLowerCase())) {
+                throw new errors_1.ValidationError("Catégorie invalide");
+            }
+            if (updates.dailyPrice) {
+                if (updates.dailyPrice < MIN_PRICE || updates.dailyPrice > MAX_PRICE) {
+                    throw new errors_1.ValidationError(`Le prix journalier doit être compris entre ${MIN_PRICE} et ${MAX_PRICE}`);
+                }
+            }
+            if (updates.images && updates.images.length > MAX_IMAGES) {
+                throw new errors_1.ValidationError(`Le nombre maximum d'images est de ${MAX_IMAGES}`);
+            }
+            if (updates.availability) {
+                const { startDate, endDate } = updates.availability;
+                const now = new Date();
+                if (startDate < now) {
+                    throw new errors_1.ValidationError("La date de début doit être dans le futur");
+                }
+                if (startDate >= endDate) {
+                    throw new errors_1.ValidationError("La date de début doit être antérieure à la date de fin");
+                }
+            }
+            if (updates.location) {
+                const { coordinates } = updates.location;
+                if (!coordinates ||
+                    coordinates.length !== 2 ||
+                    coordinates[0] < -180 ||
+                    coordinates[0] > 180 ||
+                    coordinates[1] < -90 ||
+                    coordinates[1] > 90) {
+                    throw new errors_1.ValidationError("Coordonnées géographiques invalides");
+                }
+            }
+            const updatedTool = await models_1.Tool.findByIdAndUpdate(id, { $set: updates }, { new: true }).populate("owner", "firstName lastName email");
+            if (!updatedTool) {
+                throw new errors_1.DatabaseError("Erreur lors de la mise à jour de l'outil");
+            }
+            await securityLogService_1.securityLogService.logEvent(new mongoose_1.Types.ObjectId(req.user.userId), "tool_updated", "Outil mis à jour");
+            const response = {
+                message: "Outil mis à jour avec succès",
+                tool: updatedTool,
+            };
+            res.status(200).json(response);
+        }
+        catch (error) {
+            next(error);
+        }
+    },
+    async deleteTool(req, res, next) {
+        var _a;
+        try {
+            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+                throw new errors_1.AuthenticationError("Non autorisé");
+            }
+            const { id } = req.params;
+            if (!id || !mongoose_1.Types.ObjectId.isValid(id)) {
+                throw new errors_1.ValidationError("ID d'outil invalide");
+            }
+            const tool = await models_1.Tool.findById(id);
+            if (!tool) {
+                throw new errors_1.DatabaseError("Outil non trouvé");
+            }
+            if (tool.owner.toString() !== req.user.userId) {
+                throw new errors_1.AuthenticationError("Non autorisé à supprimer cet outil");
+            }
+            if (tool.status === "rented") {
+                throw new errors_1.ValidationError("Impossible de supprimer un outil en cours de location");
+            }
+            await models_1.Tool.deleteOne({ _id: id });
+            await securityLogService_1.securityLogService.logEvent(new mongoose_1.Types.ObjectId(req.user.userId), "tool_deleted", "Outil supprimé");
+            const response = {
+                message: "Outil supprimé avec succès",
+            };
+            res.status(200).json(response);
+        }
+        catch (error) {
+            next(error);
+        }
+    },
+    async getUserTools(req, res, next) {
+        var _a;
+        try {
+            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+                throw new errors_1.AuthenticationError("Non autorisé");
+            }
+            const tools = await models_1.Tool.find({ owner: req.user.userId })
+                .populate("reviews")
+                .sort({ createdAt: -1 });
+            const response = {
+                message: "Outils récupérés avec succès",
+                tools,
+            };
+            res.status(200).json(response);
+        }
+        catch (error) {
+            next(error);
+        }
+    },
+};
+//# sourceMappingURL=toolController.js.map

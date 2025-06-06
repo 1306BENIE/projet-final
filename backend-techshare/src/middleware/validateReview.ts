@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, NextFunction } from "express";
 import { ValidationError } from "../utils/errors";
 import { Types } from "mongoose";
 
@@ -8,11 +8,7 @@ const MAX_RATING = 5;
 const MIN_COMMENT_LENGTH = 10;
 const MAX_COMMENT_LENGTH = 1000;
 
-export const validateReview = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
+export const validateReview = (req: Request, next: NextFunction): void => {
   try {
     const { toolId, rating, comment } = req.body;
 

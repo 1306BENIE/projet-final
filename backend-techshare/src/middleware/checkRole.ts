@@ -23,6 +23,8 @@ export const checkRoleMiddleware = (roles: string[]) => {
       res
         .status(500)
         .json({ message: "Erreur lors de la vérification des permissions" });
+      return;
     }
+    return;
   };
 };

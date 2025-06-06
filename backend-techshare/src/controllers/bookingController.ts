@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
 import { Booking } from "../models/Booking";
 import { Tool } from "../models/Tool";
 import { Types } from "mongoose";
@@ -13,11 +13,7 @@ const handleError = (error: any, res: Response) => {
 };
 
 // Create a new booking
-export const createBooking = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const createBooking = async (req: Request, res: Response) => {
   try {
     const { toolId, startDate, endDate, message } = req.body;
     const userId = req.user?.userId;
@@ -72,14 +68,11 @@ export const createBooking = async (
   } catch (error) {
     handleError(error, res);
   }
+  return;
 };
 
 // Get user's bookings
-export const getUserBookings = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const getUserBookings = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
     const page = parseInt(req.query.page as string) || 1;
@@ -106,14 +99,11 @@ export const getUserBookings = async (
   } catch (error) {
     handleError(error, res);
   }
+  return;
 };
 
 // Get owner's bookings
-export const getOwnerBookings = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const getOwnerBookings = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
     const page = parseInt(req.query.page as string) || 1;
@@ -140,14 +130,11 @@ export const getOwnerBookings = async (
   } catch (error) {
     handleError(error, res);
   }
+  return;
 };
 
 // Get booking by ID
-export const getBookingById = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const getBookingById = async (req: Request, res: Response) => {
   try {
     const bookingId = req.params.id;
     const userId = req.user?.userId;
@@ -173,14 +160,11 @@ export const getBookingById = async (
   } catch (error) {
     handleError(error, res);
   }
+  return;
 };
 
 // Cancel booking
-export const cancelBooking = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const cancelBooking = async (req: Request, res: Response) => {
   try {
     const bookingId = req.params.id;
     const userId = req.user?.userId;
@@ -219,14 +203,11 @@ export const cancelBooking = async (
   } catch (error) {
     handleError(error, res);
   }
+  return;
 };
 
 // Update booking status
-export const updateBooking = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const updateBooking = async (req: Request, res: Response) => {
   try {
     const bookingId = req.params.id;
     const userId = req.user?.userId;
@@ -272,4 +253,5 @@ export const updateBooking = async (
   } catch (error) {
     handleError(error, res);
   }
+  return;
 };

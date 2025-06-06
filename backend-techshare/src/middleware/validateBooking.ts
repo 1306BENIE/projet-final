@@ -83,4 +83,5 @@ export const validateBooking = (
   } catch (error) {
     next(error);
   }
+  return;
 };

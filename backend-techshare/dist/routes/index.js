@@ -1,0 +1,33 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const userRoutes_1 = __importDefault(require("./userRoutes"));
+const toolRoutes_1 = __importDefault(require("./toolRoutes"));
+const rentalRoutes_1 = __importDefault(require("./rentalRoutes"));
+const reviewRoutes_1 = __importDefault(require("./reviewRoutes"));
+const adminRoutes_1 = __importDefault(require("./adminRoutes"));
+const searchRoutes_1 = __importDefault(require("./searchRoutes"));
+const recommendationRoutes_1 = __importDefault(require("./recommendationRoutes"));
+const notificationRoutes_1 = __importDefault(require("./notificationRoutes"));
+const categoryRoutes_1 = __importDefault(require("./categoryRoutes"));
+const paymentRoutes_1 = __importDefault(require("./paymentRoutes"));
+const statsRoutes_1 = __importDefault(require("./statsRoutes"));
+const reportRoutes_1 = __importDefault(require("./reportRoutes"));
+const router = express_1.default.Router();
+router.use("/users", userRoutes_1.default);
+router.use("/tools", toolRoutes_1.default);
+router.use("/rentals", rentalRoutes_1.default);
+router.use("/reviews", reviewRoutes_1.default);
+router.use("/admin", adminRoutes_1.default);
+router.use("/search", searchRoutes_1.default);
+router.use("/recommendations", recommendationRoutes_1.default);
+router.use("/notifications", notificationRoutes_1.default);
+router.use("/categories", categoryRoutes_1.default);
+router.use("/payments", paymentRoutes_1.default);
+router.use("/stats", statsRoutes_1.default);
+router.use("/reports", reportRoutes_1.default);
+exports.default = router;
+//# sourceMappingURL=index.js.map
