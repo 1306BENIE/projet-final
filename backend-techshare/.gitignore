@@ -1,0 +1,35 @@
+.env
+node_modules
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# données de runtime
+pids
+*.pid
+*.seed
+
+# Dependency directories
+jspm_packages
+
+# cache npm 
+.npm
+
+# cache eslint
+.eslintcache
+
+# Misc
+*.tar
+*.zip
+*.tar.gz
+*.tar.bz
+*.tar.xz
+
+
+
+# fichier de configuration
+config.ts   
+
+

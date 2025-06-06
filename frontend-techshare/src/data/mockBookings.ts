@@ -1,0 +1,43 @@
+import { Booking, BookingStatus, PaymentStatus } from "../interfaces/Booking";
+
+export const mockBookings: Booking[] = [
+  {
+    id: "1",
+    toolId: "tool-1",
+    userId: "user@example.com",
+    startDate: new Date("2024-03-20"),
+    endDate: new Date("2024-03-25"),
+    status: BookingStatus.CONFIRMED,
+    totalPrice: 15000,
+    createdAt: new Date("2024-03-15"),
+    updatedAt: new Date("2024-03-15"),
+    notes: "Urgent project need",
+    paymentStatus: PaymentStatus.PAID,
+  },
+  {
+    id: "2",
+    toolId: "tool-2",
+    userId: "other@example.com",
+    startDate: new Date("2024-03-22"),
+    endDate: new Date("2024-03-24"),
+    status: BookingStatus.PENDING,
+    totalPrice: 8000,
+    createdAt: new Date("2024-03-16"),
+    updatedAt: new Date("2024-03-16"),
+    notes: "For personal use",
+    paymentStatus: PaymentStatus.PENDING,
+  },
+  {
+    id: "3",
+    toolId: "tool-3",
+    userId: "user@example.com",
+    startDate: new Date("2024-03-25"),
+    endDate: new Date("2024-03-28"),
+    status: BookingStatus.COMPLETED,
+    totalPrice: 12000,
+    createdAt: new Date("2024-03-10"),
+    updatedAt: new Date("2024-03-28"),
+    notes: "Web development project",
+    paymentStatus: PaymentStatus.PAID,
+  },
+];

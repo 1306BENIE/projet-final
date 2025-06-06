@@ -1,0 +1,62 @@
+import {
+  Booking,
+  CreateBookingDto,
+  UpdateBookingDto,
+  BookingStatus,
+  PaymentStatus,
+} from "@/interfaces/Booking";
+import api from "./api";
+
+class BookingService {
+  async createBooking(data: CreateBookingDto): Promise<Booking> {
+    const response = await api.post<Booking>("/bookings", data);
+    return response.data;
+  }
+
+  async getBookings(): Promise<Booking[]> {
+    const response = await api.get<Booking[]>("/bookings");
+    return response.data;
+  }
+
+  async getBooking(id: string): Promise<Booking> {
+    const response = await api.get<Booking>(`/bookings/${id}`);
+    return response.data;
+  }
+
+  async getUserBookings(userId: string): Promise<Booking[]> {
+    const response = await api.get<Booking[]>(`/bookings/user/${userId}`);
+    return response.data;
+  }
+
+  async getReceivedBookings(userId: string): Promise<Booking[]> {
+    const response = await api.get<Booking[]>(`/bookings/received/${userId}`);
+    return response.data;
+  }
+
+  async updateBooking(id: string, data: UpdateBookingDto): Promise<Booking> {
+    const response = await api.put<Booking>(`/bookings/${id}`, data);
+    return response.data;
+  }
+
+  async confirmBooking(id: string): Promise<Booking> {
+    const response = await api.put<Booking>(`/bookings/${id}/confirm`);
+    return response.data;
+  }
+
+  async rejectBooking(id: string): Promise<Booking> {
+    const response = await api.put<Booking>(`/bookings/${id}/reject`);
+    return response.data;
+  }
+
+  async cancelBooking(id: string): Promise<Booking> {
+    const response = await api.put<Booking>(`/bookings/${id}/cancel`);
+    return response.data;
+  }
+
+  async completeBooking(id: string): Promise<Booking> {
+    const response = await api.put<Booking>(`/bookings/${id}/complete`);
+    return response.data;
+  }
+}
+
+export const bookingService = new BookingService();
