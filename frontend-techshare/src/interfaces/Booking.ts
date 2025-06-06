@@ -27,6 +27,7 @@ export interface Booking {
 }
 
 export interface CreateBookingDto {
+  userId: string;
   toolId: string;
   startDate: Date;
   endDate: Date;

@@ -55,6 +55,7 @@ export default function BookTool() {
 
     try {
       const booking = await createBooking({
+        userId: user.id,
         toolId: tool.id,
         startDate: data.startDate,
         endDate: data.endDate,

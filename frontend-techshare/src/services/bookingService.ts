@@ -1,11 +1,14 @@
-import {
-  Booking,
-  CreateBookingDto,
-  UpdateBookingDto,
-  BookingStatus,
-  PaymentStatus,
-} from "@/interfaces/Booking";
+import { Booking, BookingInput } from "@/types/booking";
 import api from "./api";
+
+interface CreateBookingDto extends BookingInput {
+  userId: string;
+}
+
+interface UpdateBookingDto {
+  status?: string;
+  totalPrice?: number;
+}
 
 class BookingService {
   async createBooking(data: CreateBookingDto): Promise<Booking> {

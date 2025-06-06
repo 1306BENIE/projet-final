@@ -5,10 +5,10 @@ import {
   ReservationStatus,
   PaymentStatus,
 } from "@/interfaces/Reservation";
-import { mockReservations } from "@/data/mockReservations";
+import { mockReservationsData } from "@/data/mockReservationsData";
 
 class ReservationService {
-  private reservations: Reservation[] = [...mockReservations];
+  private reservations: Reservation[] = [...mockReservationsData];
 
   // Simuler un délai réseau
   private delay(ms: number) {
