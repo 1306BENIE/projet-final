@@ -18,13 +18,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const connection_1 = __importDefault(require("./connection"));
-__exportStar(require("./config"), exports);
+__exportStar(require("../config"), exports);
 const connectToDatabase = async () => {
     try {
         await connection_1.default.connect();
     }
     catch (error) {
-        console.error('Erreur lors de la connexion à la base de données:', error);
+        console.error("Erreur lors de la connexion à la base de données:", error);
         process.exit(1);
     }
 };
