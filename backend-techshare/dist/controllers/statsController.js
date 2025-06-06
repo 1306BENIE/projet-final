@@ -13,7 +13,6 @@ const handleError = (res, error, message) => {
 };
 exports.statsController = {
     async getDashboardStats(_req, res) {
-        var _a;
         try {
             const [totalTools, totalUsers, totalRentals, totalReviews, activeRentals, totalRevenue,] = await Promise.all([
                 Tool_1.Tool.countDocuments(),
@@ -26,7 +25,7 @@ exports.statsController = {
                     { $group: { _id: null, total: { $sum: "$totalPrice" } } },
                 ]),
             ]);
-            const revenue = ((_a = totalRevenue[0]) === null || _a === void 0 ? void 0 : _a.total) || 0;
+            const revenue = totalRevenue[0]?.total || 0;
             res.json({
                 totalTools,
                 totalUsers,
@@ -115,7 +114,6 @@ exports.statsController = {
         }
     },
     async getRentalStats(_req, res) {
-        var _a;
         try {
             const [rentalTrends, statusDistribution, averageRentalDuration] = await Promise.all([
                 Rental_1.Rental.aggregate([
@@ -143,7 +141,7 @@ exports.statsController = {
                                 $avg: {
                                     $divide: [
                                         { $subtract: ["$endDate", "$startDate"] },
-                                        1000 * 60 * 60 * 24,
+                                        1000 * 60 * 60 * 24, // Convertir en jours
                                     ],
                                 },
                             },
@@ -154,7 +152,7 @@ exports.statsController = {
             res.json({
                 rentalTrends,
                 statusDistribution,
-                averageRentalDuration: ((_a = averageRentalDuration[0]) === null || _a === void 0 ? void 0 : _a.averageDuration) || 0,
+                averageRentalDuration: averageRentalDuration[0]?.averageDuration || 0,
             });
         }
         catch (error) {

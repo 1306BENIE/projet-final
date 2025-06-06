@@ -9,6 +9,7 @@ const errorHandler = (fn) => {
             return await fn(req, res, next);
         }
         catch (error) {
+            // Log détaillé de l'erreur
             logger_1.logger.error("Erreur dans le contrôleur:", {
                 error: {
                     name: error.name,
@@ -34,6 +35,7 @@ const errorHandler = (fn) => {
                     }
                     : undefined,
             });
+            // Gestion des erreurs spécifiques
             if (error instanceof errors_1.ValidationError) {
                 return res.status(400).json({
                     error: "ValidationError",
@@ -54,6 +56,7 @@ const errorHandler = (fn) => {
                     details: process.env.NODE_ENV === "development" ? error.message : undefined,
                 });
             }
+            // Erreur par défaut
             return res.status(500).json({
                 error: "InternalServerError",
                 message: "Une erreur inattendue est survenue",

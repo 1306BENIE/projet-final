@@ -8,9 +8,11 @@ class SearchService {
     async searchTools(filters, page = 1, limit = 10) {
         try {
             const query = {};
+            // Filtre par catégorie
             if (filters.category) {
                 query.category = new mongoose_1.Types.ObjectId(filters.category);
             }
+            // Filtre par prix
             if (filters.minPrice || filters.maxPrice) {
                 query.price = {};
                 if (filters.minPrice)
@@ -18,14 +20,16 @@ class SearchService {
                 if (filters.maxPrice)
                     query.price.$lte = filters.maxPrice;
             }
+            // Filtre par localisation
             if (filters.location && filters.maxDistance) {
                 query.location = {
                     $near: {
                         $geometry: filters.location,
-                        $maxDistance: filters.maxDistance * 1000,
+                        $maxDistance: filters.maxDistance * 1000, // Conversion en mètres
                     },
                 };
             }
+            // Filtre par disponibilité
             if (filters.availability) {
                 query.availability = {
                     $elemMatch: {
@@ -34,6 +38,7 @@ class SearchService {
                     },
                 };
             }
+            // Recherche textuelle
             if (filters.searchTerm) {
                 query.$or = [
                     { name: { $regex: filters.searchTerm, $options: "i" } },

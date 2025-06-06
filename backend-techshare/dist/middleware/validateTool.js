@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateTool = void 0;
 const errors_1 = require("../utils/errors");
+// Constantes de validation
 const MIN_NAME_LENGTH = 3;
 const MAX_NAME_LENGTH = 100;
 const MIN_DESCRIPTION_LENGTH = 10;
@@ -20,6 +21,7 @@ const VALID_CATEGORIES = [
 const validateTool = (req, _res, next) => {
     try {
         const { name, description, category, price, location } = req.body;
+        // Validation du nom
         if (!name || typeof name !== "string") {
             throw new errors_1.ValidationError("Le nom est requis et doit être une chaîne de caractères");
         }
@@ -29,6 +31,7 @@ const validateTool = (req, _res, next) => {
         if (name.length > MAX_NAME_LENGTH) {
             throw new errors_1.ValidationError(`Le nom ne doit pas dépasser ${MAX_NAME_LENGTH} caractères`);
         }
+        // Validation de la description
         if (!description || typeof description !== "string") {
             throw new errors_1.ValidationError("La description est requise et doit être une chaîne de caractères");
         }
@@ -38,18 +41,21 @@ const validateTool = (req, _res, next) => {
         if (description.length > MAX_DESCRIPTION_LENGTH) {
             throw new errors_1.ValidationError(`La description ne doit pas dépasser ${MAX_DESCRIPTION_LENGTH} caractères`);
         }
+        // Validation de la catégorie
         if (!category || typeof category !== "string") {
             throw new errors_1.ValidationError("La catégorie est requise et doit être une chaîne de caractères");
         }
         if (!VALID_CATEGORIES.includes(category.toLowerCase())) {
             throw new errors_1.ValidationError(`La catégorie doit être l'une des suivantes : ${VALID_CATEGORIES.join(", ")}`);
         }
+        // Validation du prix
         if (!price || typeof price !== "number") {
             throw new errors_1.ValidationError("Le prix est requis et doit être un nombre");
         }
         if (price < MIN_PRICE || price > MAX_PRICE) {
             throw new errors_1.ValidationError(`Le prix doit être compris entre ${MIN_PRICE} et ${MAX_PRICE}`);
         }
+        // Validation de la localisation
         if (!location || typeof location !== "object") {
             throw new errors_1.ValidationError("La localisation est requise et doit être un objet");
         }
@@ -69,6 +75,7 @@ const validateTool = (req, _res, next) => {
             latitude > 90) {
             throw new errors_1.ValidationError("Les coordonnées doivent être des nombres valides (longitude: -180 à 180, latitude: -90 à 90)");
         }
+        // Validation des images (si présentes)
         if (req.files && Array.isArray(req.files)) {
             if (req.files.length > MAX_IMAGES) {
                 throw new errors_1.ValidationError(`Le nombre maximum d'images autorisé est ${MAX_IMAGES}`);

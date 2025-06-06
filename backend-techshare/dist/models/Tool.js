@@ -122,7 +122,9 @@ const toolSchema = new mongoose_1.Schema({
 }, {
     timestamps: true,
 });
+// Index pour la recherche géospatiale
 toolSchema.index({ location: "2dsphere" });
+// Middleware pour logger les opérations
 toolSchema.pre("save", function (next) {
     logger_1.logger.debug("Sauvegarde d'un outil", {
         toolId: this._id,

@@ -9,8 +9,10 @@ const app_1 = __importDefault(require("./app"));
 const connection_1 = __importDefault(require("./db-connection/connection"));
 const logger_1 = require("./utils/logger");
 const PORT = process.env.PORT || 3000;
+// Connexion à la base de données
 connection_1.default.connect()
     .then(() => {
+    // Démarrage du serveur
     app_1.default.listen(PORT, () => {
         logger_1.logger.info(`Le serveur a bien démarré sur le port http://localhost:${PORT}`);
     });
@@ -19,6 +21,7 @@ connection_1.default.connect()
     logger_1.logger.error("Erreur lors du démarrage du serveur:", error);
     process.exit(1);
 });
+// Gestion des erreurs non capturées
 process.on("uncaughtException", (error) => {
     logger_1.logger.error("Erreur non capturée:", error);
     process.exit(1);

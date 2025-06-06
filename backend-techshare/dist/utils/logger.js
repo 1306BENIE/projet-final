@@ -7,6 +7,7 @@ exports.logPerformance = exports.logSecurityEvent = exports.logHttpRequest = exp
 const winston_1 = __importDefault(require("winston"));
 require("winston-daily-rotate-file");
 const path_1 = __importDefault(require("path"));
+// Définition des niveaux de log
 const levels = {
     error: 0,
     warn: 1,
@@ -14,11 +15,13 @@ const levels = {
     http: 3,
     debug: 4,
 };
+// Choix du niveau de log en fonction de l'environnement
 const level = () => {
     const env = process.env.NODE_ENV || 'development';
     const isDevelopment = env === 'development';
     return isDevelopment ? 'debug' : 'warn';
 };
+// Définition des couleurs pour chaque niveau
 const colors = {
     error: 'red',
     warn: 'yellow',
@@ -26,10 +29,21 @@ const colors = {
     http: 'magenta',
     debug: 'white',
 };
+// Ajout des couleurs à Winston
 winston_1.default.addColors(colors);
-const format = winston_1.default.format.combine(winston_1.default.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }), winston_1.default.format.colorize({ all: true }), winston_1.default.format.printf((info) => `${info.timestamp} ${info.level}: ${info.message}`));
+// Format personnalisé pour les logs
+const format = winston_1.default.format.combine(
+// Ajout du timestamp
+winston_1.default.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }), 
+// Ajout des couleurs
+winston_1.default.format.colorize({ all: true }), 
+// Format du message
+winston_1.default.format.printf((info) => `${info.timestamp} ${info.level}: ${info.message}`));
+// Configuration des transports (où les logs seront stockés)
 const transports = [
+    // Console pour le développement
     new winston_1.default.transports.Console(),
+    // Fichier pour les erreurs
     new winston_1.default.transports.DailyRotateFile({
         filename: path_1.default.join('logs', 'error-%DATE%.log'),
         datePattern: 'YYYY-MM-DD',
@@ -38,6 +52,7 @@ const transports = [
         maxFiles: '14d',
         level: 'error',
     }),
+    // Fichier pour tous les logs
     new winston_1.default.transports.DailyRotateFile({
         filename: path_1.default.join('logs', 'combined-%DATE%.log'),
         datePattern: 'YYYY-MM-DD',
@@ -46,17 +61,20 @@ const transports = [
         maxFiles: '14d',
     }),
 ];
+// Création du logger
 exports.logger = winston_1.default.createLogger({
     level: level(),
     levels,
     format,
     transports,
 });
+// Création d'un stream pour Morgan (si vous utilisez Morgan pour les logs HTTP)
 exports.stream = {
     write: (message) => {
         exports.logger.http(message.trim());
     },
 };
+// Export d'une fonction helper pour logger les erreurs
 const logError = (error, context) => {
     exports.logger.error(`${context ? `[${context}] ` : ''}${error.message}`, {
         stack: error.stack,
@@ -64,18 +82,19 @@ const logError = (error, context) => {
     });
 };
 exports.logError = logError;
+// Export d'une fonction helper pour logger les requêtes HTTP
 const logHttpRequest = (req, _res, next) => {
-    var _a;
     const { method, originalUrl, ip } = req;
     const userAgent = req.get('user-agent') || 'unknown';
     exports.logger.http(`${method} ${originalUrl}`, {
         ip,
         userAgent,
-        userId: (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId
+        userId: req.user?.userId
     });
     next();
 };
 exports.logHttpRequest = logHttpRequest;
+// Export d'une fonction helper pour logger les actions de sécurité
 const logSecurityEvent = (action, details, userId) => {
     exports.logger.warn(`Security Event: ${action}`, {
         userId,
@@ -83,6 +102,7 @@ const logSecurityEvent = (action, details, userId) => {
     });
 };
 exports.logSecurityEvent = logSecurityEvent;
+// Export d'une fonction helper pour logger les performances
 const logPerformance = (operation, duration, metadata) => {
     exports.logger.info(`Performance: ${operation}`, {
         duration: `${duration}ms`,

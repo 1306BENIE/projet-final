@@ -109,6 +109,7 @@ const rentalSchema = new mongoose_1.Schema({
 }, {
     timestamps: true,
 });
+// Middleware pour logger les opérations
 rentalSchema.pre("save", function (next) {
     logger_1.logger.debug("Sauvegarde d'une location", {
         rentalId: this._id,

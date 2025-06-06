@@ -41,7 +41,7 @@ const bookingSchema = new mongoose_1.Schema({
         type: mongoose_1.Schema.Types.ObjectId,
         ref: "Tool",
         required: [true, "Tool is required"],
-        index: true,
+        index: true, // Index for faster queries
     },
     renter: {
         type: mongoose_1.Schema.Types.ObjectId,
@@ -159,8 +159,10 @@ const bookingSchema = new mongoose_1.Schema({
 }, {
     timestamps: true,
 });
+// Indexes for common queries
 bookingSchema.index({ tool: 1, startDate: 1, endDate: 1 });
 bookingSchema.index({ status: 1, startDate: 1 });
+// Static method to check availability
 bookingSchema.statics.checkAvailability = async function (toolId, startDate, endDate) {
     const overlappingBooking = await this.findOne({
         tool: toolId,
@@ -174,6 +176,7 @@ bookingSchema.statics.checkAvailability = async function (toolId, startDate, end
     });
     return !overlappingBooking;
 };
+// Static method to calculate total price
 bookingSchema.statics.calculateTotalPrice = async function (toolId, startDate, endDate) {
     const tool = await mongoose_1.default.model("Tool").findById(toolId);
     if (!tool)
@@ -181,6 +184,7 @@ bookingSchema.statics.calculateTotalPrice = async function (toolId, startDate, e
     const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     return tool.dailyPrice * days;
 };
+// Middleware to log operations
 bookingSchema.pre("save", function (next) {
     logger_1.logger.debug("Saving a booking", {
         bookingId: this._id,
@@ -198,6 +202,7 @@ bookingSchema.pre("deleteOne", function (next) {
     });
     next();
 });
+// Method to add notification
 bookingSchema.methods.addNotification = function (type, message) {
     this.notifications.push({
         type,

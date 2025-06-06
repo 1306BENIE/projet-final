@@ -12,17 +12,23 @@ export interface SecurityLogInput {
 }
 
 // Interface pour le document complet
-export interface ISecurityLog extends Document, SecurityLogInput {
+export interface ISecurityLog {
+  userId: Schema.Types.ObjectId;
+  action: string;
+  ipAddress: string;
+  userAgent: string;
+  status: "success" | "failure";
+  details?: string;
   createdAt: Date;
 }
 
 const securityLogSchema = new Schema<ISecurityLog>({
-  userId: { type: Schema.Types.ObjectId, ref: "User" },
+  userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
   action: { type: String, required: true },
   ipAddress: { type: String, required: true },
   userAgent: { type: String, required: true },
   status: { type: String, enum: ["success", "failure"], required: true },
-  details: { type: Schema.Types.Mixed },
+  details: { type: String },
   createdAt: { type: Date, default: Date.now },
 });
 

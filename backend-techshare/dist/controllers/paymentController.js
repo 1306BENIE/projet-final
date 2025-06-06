@@ -9,16 +9,17 @@ const models_1 = require("../models");
 const logger_1 = require("../utils/logger");
 const mongoose_1 = require("mongoose");
 const errors_1 = require("../utils/errors");
+// Vérification de la clé secrète Stripe
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 if (!stripeSecretKey) {
     throw new Error("STRIPE_SECRET_KEY is not defined in environment variables");
 }
-const stripe = new stripe_1.default(stripeSecretKey, { apiVersion: "2025-04-30.basil" });
+const stripe = new stripe_1.default(stripeSecretKey, { apiVersion: "2025-05-28.basil" });
 exports.paymentController = {
+    // Create payment intent
     async createPaymentIntent(req, res, next) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+            if (!req.user?.userId) {
                 throw new errors_1.AuthenticationError("Non autorisé");
             }
             const { rentalId } = req.body;
@@ -29,20 +30,23 @@ exports.paymentController = {
             if (!rental) {
                 throw new errors_1.DatabaseError("Location non trouvée");
             }
+            // Check if user is the renter
             if (rental.renter.toString() !== req.user.userId) {
                 throw new errors_1.AuthenticationError("Accès refusé");
             }
+            // Check if payment is already completed
             if (rental.paymentStatus === "paid") {
                 throw new errors_1.ValidationError("Le paiement a déjà été effectué");
             }
             const paymentIntent = await stripe.paymentIntents.create({
-                amount: Math.round(rental.totalPrice * 100),
+                amount: Math.round(rental.totalPrice * 100), // Convert to cents and ensure integer
                 currency: "eur",
                 metadata: {
                     rentalId: rental._id.toString(),
                     userId: req.user.userId,
                 },
             });
+            // Update rental with payment intent ID
             rental.stripePaymentId = paymentIntent.id;
             await rental.save();
             const response = {
@@ -55,6 +59,7 @@ exports.paymentController = {
             next(error);
         }
     },
+    // Handle webhook events from Stripe
     async handleWebhook(req, res, next) {
         try {
             const sig = req.headers["stripe-signature"];
@@ -66,6 +71,7 @@ exports.paymentController = {
                 throw new Error("STRIPE_WEBHOOK_SECRET is not defined");
             }
             const event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+            // Handle the event
             switch (event.type) {
                 case "payment_intent.succeeded":
                     await handlePaymentSuccess(event.data.object);
@@ -82,10 +88,10 @@ exports.paymentController = {
             next(error);
         }
     },
+    // Get payment history for a user
     async getPaymentHistory(req, res, next) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+            if (!req.user?.userId) {
                 throw new errors_1.AuthenticationError("Non autorisé");
             }
             const rentals = await models_1.Rental.find({
@@ -104,22 +110,24 @@ exports.paymentController = {
             next(error);
         }
     },
+    // Refund a payment
     async refundPayment(req, res, next) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+            if (!req.user?.userId) {
                 throw new errors_1.AuthenticationError("Non autorisé");
             }
             const { paymentIntentId, amount, reason } = req.body;
             if (!paymentIntentId) {
                 throw new errors_1.ValidationError("L'ID de l'intention de paiement est requis");
             }
+            // Vérifier si l'utilisateur a le droit de rembourser ce paiement
             const rental = await models_1.Rental.findOne({
                 stripePaymentId: paymentIntentId,
             }).populate("tool");
             if (!rental) {
                 throw new errors_1.DatabaseError("Paiement non trouvé");
             }
+            // Seul l'admin ou le propriétaire de l'outil peut rembourser
             if (req.user.role !== "admin" &&
                 rental.tool.owner.toString() !== req.user.userId) {
                 throw new errors_1.AuthenticationError("Accès refusé");
@@ -129,6 +137,7 @@ exports.paymentController = {
                 amount: amount ? Math.round(amount * 100) : undefined,
                 reason: reason || undefined,
             });
+            // Mettre à jour le statut de la location
             rental.paymentStatus = "refunded";
             rental.status = "cancelled";
             await rental.save();
@@ -142,22 +151,24 @@ exports.paymentController = {
             next(error);
         }
     },
+    // Get payment intent details
     async getPaymentIntent(req, res, next) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+            if (!req.user?.userId) {
                 throw new errors_1.AuthenticationError("Non autorisé");
             }
             const { paymentIntentId } = req.params;
             if (!paymentIntentId) {
                 throw new errors_1.ValidationError("L'ID de l'intention de paiement est requis");
             }
+            // Vérifier si l'utilisateur a le droit de voir ce paiement
             const rental = await models_1.Rental.findOne({
                 stripePaymentId: paymentIntentId,
             }).populate("tool");
             if (!rental) {
                 throw new errors_1.DatabaseError("Paiement non trouvé");
             }
+            // Seul l'admin, le propriétaire de l'outil ou le locataire peut voir le paiement
             if (req.user.role !== "admin" &&
                 rental.tool.owner.toString() !== req.user.userId &&
                 rental.renter.toString() !== req.user.userId) {
@@ -175,6 +186,7 @@ exports.paymentController = {
         }
     },
 };
+// Helper functions for webhook handling
 async function handlePaymentSuccess(paymentIntent) {
     try {
         const rental = await models_1.Rental.findOne({ stripePaymentId: paymentIntent.id });
@@ -185,6 +197,7 @@ async function handlePaymentSuccess(paymentIntent) {
         rental.paymentStatus = "paid";
         rental.status = "active";
         await rental.save();
+        // Update tool status
         const tool = await models_1.Tool.findById(rental.tool);
         if (tool) {
             tool.status = "rented";
@@ -205,6 +218,7 @@ async function handlePaymentFailure(paymentIntent) {
         rental.paymentStatus = "pending";
         rental.status = "cancelled";
         await rental.save();
+        // Update tool status
         const tool = await models_1.Tool.findById(rental.tool);
         if (tool) {
             tool.status = "available";

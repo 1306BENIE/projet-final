@@ -4,6 +4,7 @@ exports.searchController = void 0;
 const Tool_1 = require("../models/Tool");
 const Category_1 = require("../models/Category");
 const errors_1 = require("../utils/errors");
+// Constantes de validation
 const MIN_PRICE = 0;
 const MAX_PRICE = 10000;
 const MIN_RADIUS = 1;
@@ -15,9 +16,11 @@ const MAX_LIMIT = 50;
 const VALID_SORT_FIELDS = ["createdAt", "price", "rating", "name"];
 const VALID_SORT_ORDERS = ["asc", "desc"];
 exports.searchController = {
+    // Search tools with filters
     async searchTools(req, res, next) {
         try {
             const { query, category, minPrice, maxPrice, location, radius, availability, sortBy = "createdAt", sortOrder = "desc", page = 1, limit = 10, } = req.query;
+            // Validation des paramètres de pagination
             const pageNum = Number(page);
             const limitNum = Number(limit);
             if (pageNum < MIN_PAGE ||
@@ -26,13 +29,16 @@ exports.searchController = {
                 limitNum > MAX_LIMIT) {
                 throw new errors_1.ValidationError(`La page doit être entre ${MIN_PAGE} et ${MAX_PAGE}, et la limite entre ${MIN_LIMIT} et ${MAX_LIMIT}`);
             }
+            // Validation du tri
             if (!VALID_SORT_FIELDS.includes(sortBy)) {
                 throw new errors_1.ValidationError("Champ de tri invalide");
             }
             if (!VALID_SORT_ORDERS.includes(sortOrder)) {
                 throw new errors_1.ValidationError("Ordre de tri invalide");
             }
+            // Construction de la requête de base
             const filter = {};
+            // Recherche textuelle
             if (query) {
                 if (query.length < 2) {
                     throw new errors_1.ValidationError("La recherche doit contenir au moins 2 caractères");
@@ -42,6 +48,7 @@ exports.searchController = {
                     { description: { $regex: query, $options: "i" } },
                 ];
             }
+            // Filtre par catégorie
             if (category) {
                 const categoryDoc = await Category_1.Category.findOne({
                     name: { $regex: new RegExp(`^${category}$`, "i") },
@@ -51,6 +58,7 @@ exports.searchController = {
                 }
                 filter.category = categoryDoc._id;
             }
+            // Filtre par prix
             if (minPrice || maxPrice) {
                 filter.dailyPrice = {};
                 if (minPrice) {
@@ -68,9 +76,11 @@ exports.searchController = {
                     filter.dailyPrice.$lte = maxPriceNum;
                 }
             }
+            // Filtre par disponibilité
             if (availability === true) {
                 filter.status = "available";
             }
+            // Filtre géospatial
             if (location && radius) {
                 const [longitude, latitude] = location.split(",").map(Number);
                 if (isNaN(longitude) ||
@@ -91,11 +101,13 @@ exports.searchController = {
                             type: "Point",
                             coordinates: [longitude, latitude],
                         },
-                        $maxDistance: radiusNum * 1000,
+                        $maxDistance: radiusNum * 1000, // Conversion en mètres
                     },
                 };
             }
+            // Calcul de la pagination
             const skip = (pageNum - 1) * limitNum;
+            // Exécution de la requête
             const [tools, total] = await Promise.all([
                 Tool_1.Tool.find(filter)
                     .populate("owner", "firstName lastName rating")
@@ -121,6 +133,7 @@ exports.searchController = {
             next(error);
         }
     },
+    // Get popular tools
     async getPopularTools(_req, res, next) {
         try {
             const tools = await Tool_1.Tool.find({ status: "available" })
@@ -138,6 +151,7 @@ exports.searchController = {
             next(error);
         }
     },
+    // Get nearby tools
     async getNearbyTools(req, res, next) {
         try {
             const { longitude, latitude, radius = 10 } = req.query;
@@ -165,7 +179,7 @@ exports.searchController = {
                             type: "Point",
                             coordinates: [longitudeNum, latitudeNum],
                         },
-                        $maxDistance: radiusNum * 1000,
+                        $maxDistance: radiusNum * 1000, // Conversion en mètres
                     },
                 },
                 status: "available",

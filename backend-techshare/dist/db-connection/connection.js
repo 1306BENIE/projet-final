@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importDefault(require("mongoose"));
 const config_1 = require("./config");
 const logger_1 = require("../utils/logger");
+// on vérifie qu'il n'y a qu'une seule instance de connexion
 class Database {
     constructor() {
         this.isConnected = false;
@@ -30,6 +31,7 @@ class Database {
             if (this.isConnected) {
                 logger_1.logger.info('Connexion à la base de données réussie');
             }
+            // Gestion des événements de connexion
             mongoose_1.default.connection.on('error', (err) => {
                 logger_1.logger.error('Erreur de connexion à la base de données:', err);
                 this.isConnected = false;
@@ -42,6 +44,7 @@ class Database {
                 logger_1.logger.info('MongoDB reconnecté');
                 this.isConnected = true;
             });
+            // Gestion de la terminaison de l'application
             process.on('SIGINT', this.gracefulShutdown.bind(this));
             process.on('SIGTERM', this.gracefulShutdown.bind(this));
         }

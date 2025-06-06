@@ -5,13 +5,14 @@ const models_1 = require("../models");
 const errors_1 = require("../utils/errors");
 const mongoose_1 = require("mongoose");
 exports.reviewController = {
+    // Create a new review
     async createReview(req, res, next) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+            if (!req.user?.userId) {
                 throw new errors_1.AuthenticationError("Utilisateur non authentifié");
             }
             const { toolId, rentalId, rating, comment } = req.body;
+            // Validation des champs requis
             if (!toolId || !rentalId || !rating || !comment) {
                 throw new errors_1.ValidationError("Tous les champs sont requis", [
                     { field: "toolId", message: "L'ID de l'outil est requis" },
@@ -20,9 +21,11 @@ exports.reviewController = {
                     { field: "comment", message: "Le commentaire est requis" },
                 ]);
             }
+            // Validation de la note
             if (rating < 1 || rating > 5) {
                 throw new errors_1.ValidationError("La note doit être comprise entre 1 et 5");
             }
+            // Vérifier si la location existe et appartient à l'utilisateur
             const rental = await models_1.Rental.findOne({
                 _id: new mongoose_1.Types.ObjectId(rentalId),
                 renter: new mongoose_1.Types.ObjectId(req.user.userId),
@@ -31,6 +34,7 @@ exports.reviewController = {
             if (!rental) {
                 throw new errors_1.ValidationError("Location non trouvée ou non terminée");
             }
+            // Vérifier si l'utilisateur a déjà laissé un avis pour cette location
             const existingReview = await models_1.Review.findOne({
                 user: new mongoose_1.Types.ObjectId(req.user.userId),
                 rental: new mongoose_1.Types.ObjectId(rentalId),
@@ -56,6 +60,7 @@ exports.reviewController = {
             next(error);
         }
     },
+    // Get reviews by tool
     async getReviewsByTool(req, res, next) {
         try {
             const { toolId } = req.params;
@@ -78,6 +83,7 @@ exports.reviewController = {
             next(error);
         }
     },
+    // Get reviews by user
     async getReviewsByUser(req, res, next) {
         try {
             const { userId } = req.params;
@@ -100,10 +106,10 @@ exports.reviewController = {
             next(error);
         }
     },
+    // Update a review
     async updateReview(req, res, next) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+            if (!req.user?.userId) {
                 throw new errors_1.AuthenticationError("Utilisateur non authentifié");
             }
             const { reviewId } = req.params;
@@ -124,6 +130,7 @@ exports.reviewController = {
             if (!review) {
                 throw new errors_1.DatabaseError("Avis non trouvé");
             }
+            // Vérifier si l'avis a été créé il y a moins de 30 jours
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
             if (review.createdAt < thirtyDaysAgo) {
@@ -142,10 +149,10 @@ exports.reviewController = {
             next(error);
         }
     },
+    // Delete a review
     async deleteReview(req, res, next) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+            if (!req.user?.userId) {
                 throw new errors_1.AuthenticationError("Utilisateur non authentifié");
             }
             const { reviewId } = req.params;
@@ -159,6 +166,7 @@ exports.reviewController = {
             if (!review) {
                 throw new errors_1.DatabaseError("Avis non trouvé");
             }
+            // Vérifier si l'avis a été créé il y a moins de 30 jours
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
             if (review.createdAt < thirtyDaysAgo) {

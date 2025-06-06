@@ -4,9 +4,9 @@ exports.notificationController = void 0;
 const errors_1 = require("../utils/errors");
 const notificationService_1 = require("../services/notificationService");
 exports.notificationController = {
+    // Get user's notifications
     async getUserNotifications(req, res) {
-        var _a;
-        if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+        if (!req.user?.userId) {
             throw new errors_1.NotificationError("Non autorisé", 401);
         }
         const page = parseInt(req.query.page) || 1;
@@ -14,9 +14,9 @@ exports.notificationController = {
         const result = await (0, notificationService_1.getNotificationService)().getUserNotifications(req.user.userId, page, limit);
         res.json(result);
     },
+    // Get unread notifications
     async getUnreadNotifications(req, res) {
-        var _a;
-        if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+        if (!req.user?.userId) {
             throw new errors_1.NotificationError("Non autorisé", 401);
         }
         const page = parseInt(req.query.page) || 1;
@@ -27,9 +27,9 @@ exports.notificationController = {
             notifications: result.notifications.filter((n) => !n.isRead),
         });
     },
+    // Mark notification as read
     async markAsRead(req, res) {
-        var _a;
-        if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+        if (!req.user?.userId) {
             throw new errors_1.NotificationError("Non autorisé", 401);
         }
         const { id } = req.params;
@@ -39,9 +39,9 @@ exports.notificationController = {
         const notification = await (0, notificationService_1.getNotificationService)().markAsRead(id, req.user.userId);
         res.json({ message: "Notification marquée comme lue", notification });
     },
+    // Mark all notifications as read
     async markAllAsRead(req, res) {
-        var _a;
-        if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+        if (!req.user?.userId) {
             throw new errors_1.NotificationError("Non autorisé", 401);
         }
         const result = await (0, notificationService_1.getNotificationService)().markAllAsRead(req.user.userId);
@@ -50,9 +50,9 @@ exports.notificationController = {
             modifiedCount: result.modifiedCount,
         });
     },
+    // Delete notification
     async deleteNotification(req, res) {
-        var _a;
-        if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+        if (!req.user?.userId) {
             throw new errors_1.NotificationError("Non autorisé", 401);
         }
         const { id } = req.params;
@@ -62,9 +62,9 @@ exports.notificationController = {
         await (0, notificationService_1.getNotificationService)().deleteNotification(id, req.user.userId);
         res.json({ message: "Notification supprimée avec succès" });
     },
+    // Get unread notifications count
     async getUnreadCount(req, res) {
-        var _a;
-        if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+        if (!req.user?.userId) {
             throw new errors_1.NotificationError("Non autorisé", 401);
         }
         const count = await (0, notificationService_1.getNotificationService)().getUnreadCount(req.user.userId);

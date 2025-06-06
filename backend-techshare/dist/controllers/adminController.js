@@ -9,10 +9,12 @@ const Rental_1 = require("../models/Rental");
 const logger_1 = require("../utils/logger");
 const securityLogService_1 = require("../services/securityLogService");
 const errors_1 = require("../utils/errors");
+// Constantes de validation
 const MIN_PAGE = 1;
 const MAX_PAGE = 100;
 const MIN_LIMIT = 1;
 const MAX_LIMIT = 50;
+// Gestionnaire d'erreurs centralisé
 const handleError = (error, res, next, message) => {
     logger_1.logger.error(`${message}:`, error);
     if (error.name === "ValidationError") {
@@ -31,13 +33,14 @@ const handleError = (error, res, next, message) => {
     }
     next(error);
 };
+// Middleware de vérification des droits admin
 const checkAdminAccess = (req) => {
-    var _a;
-    if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) || req.user.role !== "admin") {
+    if (!req.user?.userId || req.user.role !== "admin") {
         throw new errors_1.ValidationError("Accès administrateur requis");
     }
 };
 exports.adminController = {
+    // Get all users
     async getUsers(req, res, next) {
         try {
             checkAdminAccess(req);
@@ -86,8 +89,8 @@ exports.adminController = {
             handleError(error, res, next, "Erreur lors de la récupération des utilisateurs");
         }
     },
+    // Ban user
     async banUser(req, res, next) {
-        var _a;
         try {
             checkAdminAccess(req);
             const { userId } = req.params;
@@ -103,7 +106,8 @@ exports.adminController = {
             }
             user.isBanned = true;
             await user.save();
-            if ((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) {
+            // Log de l'événement
+            if (req.user?.userId) {
                 await securityLogService_1.securityLogService.logEvent(new mongoose_1.Types.ObjectId(req.user.userId), "BAN_USER", JSON.stringify({
                     targetUserId: userId,
                     reason: req.body.reason || "Non spécifié",
@@ -121,8 +125,8 @@ exports.adminController = {
             handleError(error, res, next, "Erreur lors du bannissement de l'utilisateur");
         }
     },
+    // Unban user
     async unbanUser(req, res, next) {
-        var _a;
         try {
             checkAdminAccess(req);
             const { userId } = req.params;
@@ -138,7 +142,8 @@ exports.adminController = {
             }
             user.isBanned = false;
             await user.save();
-            if ((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) {
+            // Log de l'événement
+            if (req.user?.userId) {
                 await securityLogService_1.securityLogService.logEvent(new mongoose_1.Types.ObjectId(req.user.userId), "UNBAN_USER", JSON.stringify({
                     targetUserId: userId,
                     reason: req.body.reason || "Non spécifié",
@@ -156,6 +161,7 @@ exports.adminController = {
             handleError(error, res, next, "Erreur lors du débannissement de l'utilisateur");
         }
     },
+    // Get all tools
     async getTools(req, res, next) {
         try {
             checkAdminAccess(req);
@@ -204,8 +210,8 @@ exports.adminController = {
             handleError(error, res, next, "Erreur lors de la récupération des outils");
         }
     },
+    // Delete a tool
     async deleteTool(req, res, next) {
-        var _a;
         try {
             checkAdminAccess(req);
             const { toolId } = req.params;
@@ -217,7 +223,8 @@ exports.adminController = {
                 throw new errors_1.ValidationError("Outil non trouvé");
             }
             await tool.deleteOne();
-            if ((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) {
+            // Log de l'événement
+            if (req.user?.userId) {
                 await securityLogService_1.securityLogService.logEvent(new mongoose_1.Types.ObjectId(req.user.userId), "DELETE_TOOL", JSON.stringify({
                     toolId,
                     toolName: tool.name,
@@ -236,6 +243,7 @@ exports.adminController = {
             handleError(error, res, next, "Erreur lors de la suppression de l'outil");
         }
     },
+    // Get all reviews
     async getReviews(req, res, next) {
         try {
             checkAdminAccess(req);
@@ -280,8 +288,8 @@ exports.adminController = {
             handleError(error, res, next, "Erreur lors de la récupération des avis");
         }
     },
+    // Delete a review
     async deleteReview(req, res, next) {
-        var _a;
         try {
             checkAdminAccess(req);
             const { reviewId } = req.params;
@@ -293,7 +301,8 @@ exports.adminController = {
                 throw new errors_1.ValidationError("Avis non trouvé");
             }
             await review.deleteOne();
-            if ((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) {
+            // Log de l'événement
+            if (req.user?.userId) {
                 await securityLogService_1.securityLogService.logEvent(new mongoose_1.Types.ObjectId(req.user.userId), "DELETE_REVIEW", JSON.stringify({
                     reviewId,
                     toolId: review.tool,
@@ -313,8 +322,8 @@ exports.adminController = {
             handleError(error, res, next, "Erreur lors de la suppression de l'avis");
         }
     },
+    // Get dashboard stats
     async getStats(req, res, next) {
-        var _a;
         try {
             checkAdminAccess(req);
             const [totalUsers, totalTools, totalRentals, totalReviews, activeRentals, totalRevenue, recentActivity,] = await Promise.all([
@@ -339,7 +348,7 @@ exports.adminController = {
                 totalRentals,
                 totalReviews,
                 activeRentals,
-                totalRevenue: ((_a = totalRevenue[0]) === null || _a === void 0 ? void 0 : _a.total) || 0,
+                totalRevenue: totalRevenue[0]?.total || 0,
                 recentActivity,
             };
             const response = {

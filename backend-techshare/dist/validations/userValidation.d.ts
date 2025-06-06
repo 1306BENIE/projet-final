@@ -1,0 +1,10 @@
+import Joi from "joi";
+import { Request, Response, NextFunction } from "express";
+export declare const registerSchema: Joi.ObjectSchema<any>;
+export declare const loginSchema: Joi.ObjectSchema<any>;
+export declare const updateProfileSchema: Joi.ObjectSchema<any>;
+export declare const userListSchema: Joi.ObjectSchema<any>;
+export declare const deleteAccountSchema: Joi.ObjectSchema<any>;
+export declare const requestPasswordResetSchema: Joi.ObjectSchema<any>;
+export declare const resetPasswordSchema: Joi.ObjectSchema<any>;
+export declare const validateUser: (req: Request, res: Response, next: NextFunction) => void | Response<any, Record<string, any>>;

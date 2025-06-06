@@ -57,7 +57,9 @@ const adminSchema = new mongoose_1.Schema({
 }, {
     timestamps: true,
 });
+// Index pour la recherche rapide
 adminSchema.index({ user: 1, role: 1 });
+// Middleware pour logger les opérations
 adminSchema.pre("save", function (next) {
     logger_1.logger.debug("Sauvegarde d'un administrateur", {
         adminId: this._id,

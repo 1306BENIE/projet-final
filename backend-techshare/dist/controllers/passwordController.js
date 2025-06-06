@@ -11,6 +11,7 @@ const errors_1 = require("../utils/errors");
 const password_encoder_1 = require("../utils/password-encoder");
 const crypto_1 = __importDefault(require("crypto"));
 exports.passwordController = {
+    // Request password reset
     async requestPasswordReset(req, res, next) {
         try {
             const { email } = req.body;
@@ -19,18 +20,22 @@ exports.passwordController = {
             }
             const user = await User_1.User.findOne({ email });
             if (!user) {
+                // Pour des raisons de sécurité, on renvoie toujours un succès
                 const response = {
                     message: "Si un compte existe avec cet email, vous recevrez un lien de réinitialisation",
                 };
                 res.status(200).json(response);
                 return;
             }
+            // Générer un token de réinitialisation
             const resetToken = crypto_1.default.randomBytes(32).toString("hex");
-            const resetExpires = new Date(Date.now() + 3600000);
+            const resetExpires = new Date(Date.now() + 3600000); // 1 heure
             user.resetPasswordToken = resetToken;
             user.resetPasswordExpires = resetExpires;
             await user.save();
+            // Envoyer l'email
             await emailService_1.emailService.sendPasswordResetEmail(user, resetToken);
+            // Log the action
             await securityLogService_1.securityLogService.logEvent(user._id, "REQUEST_PASSWORD_RESET", "Demande de réinitialisation de mot de passe");
             const response = {
                 message: "Si un compte existe avec cet email, vous recevrez un lien de réinitialisation",
@@ -41,6 +46,7 @@ exports.passwordController = {
             next(error);
         }
     },
+    // Reset password
     async resetPassword(req, res, next) {
         try {
             const { token, password } = req.body;
@@ -54,6 +60,7 @@ exports.passwordController = {
             if (!user) {
                 throw new errors_1.ValidationError("Token de réinitialisation invalide ou expiré");
             }
+            // Validation du mot de passe
             const validation = password_encoder_1.PasswordEncoder.validatePassword(password);
             if (!validation.isValid) {
                 throw new errors_1.ValidationError("Mot de passe invalide", validation.errors.map((error) => ({
@@ -61,10 +68,12 @@ exports.passwordController = {
                     message: error,
                 })));
             }
+            // Mettre à jour le mot de passe
             user.password = password;
             user.resetPasswordToken = undefined;
             user.resetPasswordExpires = undefined;
             await user.save();
+            // Log the action
             await securityLogService_1.securityLogService.logEvent(user._id, "RESET_PASSWORD", "Réinitialisation de mot de passe réussie");
             const response = {
                 message: "Le mot de passe a été réinitialisé avec succès",

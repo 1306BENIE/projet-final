@@ -4,6 +4,7 @@ const cloudinary_1 = require("cloudinary");
 const index_1 = require("./index");
 const logger_1 = require("../utils/logger");
 try {
+    // Configure Cloudinary
     cloudinary_1.v2.config({
         cloud_name: index_1.config.cloudinary.cloudName,
         api_key: index_1.config.cloudinary.apiKey,

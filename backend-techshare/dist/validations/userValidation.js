@@ -7,6 +7,7 @@ exports.validateUser = exports.resetPasswordSchema = exports.requestPasswordRese
 const joi_1 = __importDefault(require("joi"));
 const logger_1 = require("../utils/logger");
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{8,}$/;
+// Ajouter ces constantes pour les options de tri
 const SORT_FIELDS = [
     "firstName",
     "lastName",
@@ -122,7 +123,9 @@ exports.updateProfileSchema = joi_1.default.object({
         "object.base": "L'adresse doit être un objet",
     }),
 });
+// Mettre à jour le schéma de pagination avec les nouveaux paramètres
 exports.userListSchema = joi_1.default.object({
+    // Paramètres de pagination
     page: joi_1.default.number().min(1).default(1).messages({
         "number.base": "Le numéro de page doit être un nombre",
         "number.min": "Le numéro de page doit être supérieur à 0",
@@ -132,6 +135,7 @@ exports.userListSchema = joi_1.default.object({
         "number.min": "La limite doit être supérieure à 0",
         "number.max": "La limite ne peut pas dépasser 100",
     }),
+    // Paramètres de tri
     sortBy: joi_1.default.string()
         .valid(...SORT_FIELDS)
         .default("createdAt")
@@ -144,10 +148,12 @@ exports.userListSchema = joi_1.default.object({
         .messages({
         "any.only": 'L\'ordre de tri doit être "asc" ou "desc"',
     }),
+    // Paramètres de recherche
     search: joi_1.default.string().min(2).max(50).messages({
         "string.min": "La recherche doit contenir au moins 2 caractères",
         "string.max": "La recherche ne doit pas dépasser 50 caractères",
     }),
+    // Paramètres de filtrage
     role: joi_1.default.string().valid("user", "admin").messages({
         "any.only": 'Le rôle doit être "user" ou "admin"',
     }),
@@ -161,6 +167,7 @@ exports.deleteAccountSchema = joi_1.default.object({
         "any.required": "La confirmation est requise",
     }),
 });
+// Schéma pour la demande de réinitialisation
 exports.requestPasswordResetSchema = joi_1.default.object({
     email: joi_1.default.string()
         .email({ tlds: { allow: false } })
@@ -170,6 +177,7 @@ exports.requestPasswordResetSchema = joi_1.default.object({
         "any.required": "L'email est requis",
     }),
 });
+// Schéma pour la réinitialisation du mot de passe
 exports.resetPasswordSchema = joi_1.default.object({
     token: joi_1.default.string().required().messages({
         "any.required": "Le token est requis",

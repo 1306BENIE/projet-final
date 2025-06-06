@@ -74,20 +74,24 @@ const userSchema = new mongoose_1.Schema({
 }, {
     timestamps: true,
 });
+// Méthode pour générer le token JWT
 userSchema.methods.generateAuthToken = function () {
     return jsonwebtoken_1.default.sign({ _id: this._id.toString() }, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
+// Méthode pour générer le token de réinitialisation
 userSchema.methods.generatePasswordResetToken =
     async function () {
         const token = crypto_1.default.randomBytes(32).toString("hex");
         this.resetPasswordToken = token;
-        this.resetPasswordExpires = new Date(Date.now() + 3600000);
+        this.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 heure
         await this.save();
         return token;
     };
+// Méthode pour comparer le mot de passe
 userSchema.methods.comparePassword = async function (candidatePassword) {
     return bcryptjs_1.default.compare(candidatePassword, this.password);
 };
+// Middleware pour hacher le mot de passe avant la sauvegarde
 userSchema.pre("save", async function (next) {
     if (!this.isModified("password"))
         return next();
@@ -100,6 +104,7 @@ userSchema.pre("save", async function (next) {
         next(error);
     }
 });
+// Index pour la recherche géospatiale
 userSchema.index({ location: "2dsphere" });
 exports.User = mongoose_1.default.model("User", userSchema);
 //# sourceMappingURL=User.js.map

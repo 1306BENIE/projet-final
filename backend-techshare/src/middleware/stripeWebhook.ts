@@ -4,7 +4,7 @@ import { config } from "../config";
 import { logger } from "../utils/logger";
 
 const stripe = new Stripe(config.stripe.secretKey, {
-  apiVersion: "2025-04-30.basil",
+  apiVersion: "2025-05-28.basil",
 });
 
 export const stripeWebhookMiddleware = async (

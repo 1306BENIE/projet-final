@@ -8,13 +8,13 @@ const stripe_1 = __importDefault(require("stripe"));
 const config_1 = require("../config");
 const logger_1 = require("../utils/logger");
 const stripe = new stripe_1.default(config_1.config.stripe.secretKey, {
-    apiVersion: "2025-04-30.basil",
+    apiVersion: "2025-05-28.basil",
 });
 class PaymentService {
     async createPaymentIntent(amount, currency = "eur") {
         try {
             const paymentIntent = await stripe.paymentIntents.create({
-                amount: Math.round(amount * 100),
+                amount: Math.round(amount * 100), // Stripe utilise les centimes
                 currency,
                 automatic_payment_methods: {
                     enabled: true,
@@ -68,9 +68,11 @@ class PaymentService {
         }
     }
     async handlePaymentSuccess(paymentIntent) {
+        // Logique pour gérer le succès du paiement
         logger_1.logger.info(`Paiement réussi: ${paymentIntent.id}`);
     }
     async handlePaymentFailure(paymentIntent) {
+        // Logique pour gérer l'échec du paiement
         logger_1.logger.info(`Échec du paiement: ${paymentIntent.id}`);
     }
 }

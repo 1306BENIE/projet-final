@@ -8,7 +8,7 @@ const stripe_1 = __importDefault(require("stripe"));
 const config_1 = require("../config");
 const logger_1 = require("../utils/logger");
 const stripe = new stripe_1.default(config_1.config.stripe.secretKey, {
-    apiVersion: "2025-04-30.basil",
+    apiVersion: "2025-05-28.basil",
 });
 const stripeWebhookMiddleware = async (req, res, next) => {
     const signature = req.headers["stripe-signature"];

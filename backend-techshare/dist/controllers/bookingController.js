@@ -5,28 +5,33 @@ const Booking_1 = require("../models/Booking");
 const Tool_1 = require("../models/Tool");
 const mongoose_1 = require("mongoose");
 const logger_1 = require("../utils/logger");
+// Centralized error handler
 const handleError = (error, res) => {
     logger_1.logger.error("Booking controller error:", error);
     res.status(error.status || 500).json({
         message: error.message || "Internal server error",
     });
 };
+// Create a new booking
 const createBooking = async (req, res) => {
-    var _a;
     try {
         const { toolId, startDate, endDate, message } = req.body;
-        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+        const userId = req.user?.userId;
+        // Check if tool exists and is available
         const tool = await Tool_1.Tool.findById(toolId);
         if (!tool) {
             return res.status(404).json({ message: "Tool not found" });
         }
+        // Check if dates are available
         const isAvailable = await Booking_1.Booking.checkAvailability(new mongoose_1.Types.ObjectId(toolId), new Date(startDate), new Date(endDate));
         if (!isAvailable) {
             return res.status(400).json({
                 message: "Tool is not available for the selected dates",
             });
         }
+        // Calculate total price
         const totalPrice = await Booking_1.Booking.calculateTotalPrice(new mongoose_1.Types.ObjectId(toolId), new Date(startDate), new Date(endDate));
+        // Create booking
         const booking = new Booking_1.Booking({
             tool: toolId,
             renter: userId,
@@ -38,6 +43,7 @@ const createBooking = async (req, res) => {
             message,
         });
         await booking.save();
+        // Add notification
         booking.addNotification("status_change", "New booking request received");
         res.status(201).json({
             message: "Booking created successfully",
@@ -50,10 +56,10 @@ const createBooking = async (req, res) => {
     return;
 };
 exports.createBooking = createBooking;
+// Get user's bookings
 const getUserBookings = async (req, res) => {
-    var _a;
     try {
-        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+        const userId = req.user?.userId;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const bookings = await Booking_1.Booking.find({ renter: userId })
@@ -79,10 +85,10 @@ const getUserBookings = async (req, res) => {
     return;
 };
 exports.getUserBookings = getUserBookings;
+// Get owner's bookings
 const getOwnerBookings = async (req, res) => {
-    var _a;
     try {
-        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+        const userId = req.user?.userId;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const bookings = await Booking_1.Booking.find({ owner: userId })
@@ -108,11 +114,11 @@ const getOwnerBookings = async (req, res) => {
     return;
 };
 exports.getOwnerBookings = getOwnerBookings;
+// Get booking by ID
 const getBookingById = async (req, res) => {
-    var _a;
     try {
         const bookingId = req.params.id;
-        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+        const userId = req.user?.userId;
         const booking = await Booking_1.Booking.findById(bookingId)
             .populate("tool")
             .populate("renter", "firstName lastName email")
@@ -120,6 +126,7 @@ const getBookingById = async (req, res) => {
         if (!booking) {
             return res.status(404).json({ message: "Booking not found" });
         }
+        // Check if user is authorized to view this booking
         if (booking.renter.toString() !== userId &&
             booking.owner.toString() !== userId) {
             return res.status(403).json({ message: "Not authorized" });
@@ -132,19 +139,21 @@ const getBookingById = async (req, res) => {
     return;
 };
 exports.getBookingById = getBookingById;
+// Cancel booking
 const cancelBooking = async (req, res) => {
-    var _a;
     try {
         const bookingId = req.params.id;
-        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+        const userId = req.user?.userId;
         const booking = await Booking_1.Booking.findById(bookingId);
         if (!booking) {
             return res.status(404).json({ message: "Booking not found" });
         }
+        // Check if user is authorized to cancel this booking
         if (booking.renter.toString() !== userId &&
             booking.owner.toString() !== userId) {
             return res.status(403).json({ message: "Not authorized" });
         }
+        // Check if booking can be cancelled
         if (!["pending", "approved"].includes(booking.status)) {
             return res.status(400).json({
                 message: "Booking cannot be cancelled in its current state",
@@ -152,6 +161,7 @@ const cancelBooking = async (req, res) => {
         }
         booking.status = "cancelled";
         await booking.save();
+        // Add notification
         booking.addNotification("status_change", "Booking has been cancelled");
         res.json({
             message: "Booking cancelled successfully",
@@ -164,31 +174,34 @@ const cancelBooking = async (req, res) => {
     return;
 };
 exports.cancelBooking = cancelBooking;
+// Update booking status
 const updateBooking = async (req, res) => {
-    var _a, _b;
     try {
         const bookingId = req.params.id;
-        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+        const userId = req.user?.userId;
         const { status } = req.body;
         const booking = await Booking_1.Booking.findById(bookingId);
         if (!booking) {
             return res.status(404).json({ message: "Booking not found" });
         }
+        // Check if user is the owner
         if (booking.owner.toString() !== userId) {
             return res.status(403).json({ message: "Not authorized" });
         }
+        // Validate status transition
         const validTransitions = {
             pending: ["approved", "rejected"],
             approved: ["active"],
             active: ["completed"],
         };
-        if (!((_b = validTransitions[booking.status]) === null || _b === void 0 ? void 0 : _b.includes(status))) {
+        if (!validTransitions[booking.status]?.includes(status)) {
             return res.status(400).json({
                 message: `Cannot change status from ${booking.status} to ${status}`,
             });
         }
         booking.status = status;
         await booking.save();
+        // Add notification
         booking.addNotification("status_change", `Booking status changed to ${status}`);
         res.json({
             message: "Booking updated successfully",

@@ -10,6 +10,7 @@ const morgan_1 = __importDefault(require("morgan"));
 const rateLimiter_1 = require("./middleware/rateLimiter");
 const logger_1 = require("./utils/logger");
 const recommendationService_1 = require("./services/recommendationService");
+// Import des routes
 const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const toolRoutes_1 = __importDefault(require("./routes/toolRoutes"));
@@ -24,23 +25,28 @@ const statsRoutes_1 = __importDefault(require("./routes/statsRoutes"));
 const reportRoutes_1 = __importDefault(require("./routes/reportRoutes"));
 const testRoutes_1 = __importDefault(require("./routes/testRoutes"));
 const app = (0, express_1.default)();
+// Initialisation des services
 (0, recommendationService_1.initializeRecommendationService)();
+// Configuration de sécurité
 app.use((0, helmet_1.default)());
+// Configuration CORS
 app.use((0, cors_1.default)({
     origin: process.env.CORS_ORIGIN || "*",
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
-    maxAge: 86400,
+    maxAge: 86400, // 24 heures
 }));
-app.use(express_1.default.json({ limit: "10mb" }));
-app.use(express_1.default.urlencoded({ extended: true, limit: "10mb" }));
+// Middleware de base
+app.use(express_1.default.json({ limit: "10mb" })); // Limite la taille des requêtes JSON
+app.use(express_1.default.urlencoded({ extended: true, limit: "10mb" })); // Limite la taille des requêtes URL-encoded
 app.use((0, morgan_1.default)("dev", {
     stream: {
         write: (message) => logger_1.logger.info(message.trim()),
     },
 }));
 app.use(rateLimiter_1.rateLimiterMiddleware);
+// Routes
 app.use("/api/users", userRoutes_1.default);
 app.use("/api/admin", adminRoutes_1.default);
 app.use("/api/tools", toolRoutes_1.default);
@@ -54,6 +60,7 @@ app.use("/api/payments", paymentRoutes_1.default);
 app.use("/api/stats", statsRoutes_1.default);
 app.use("/api/reports", reportRoutes_1.default);
 app.use("/api/test", testRoutes_1.default);
+// Gestion des erreurs 404
 app.use((req, res) => {
     logger_1.logger.warn(`Route non trouvée: ${req.method} ${req.originalUrl}`);
     res.status(404).json({
@@ -62,6 +69,7 @@ app.use((req, res) => {
         method: req.method,
     });
 });
+// Gestion globale des erreurs
 app.use((err, req, res, _next) => {
     const status = err.status || 500;
     const message = err.message || "Une erreur est survenue";

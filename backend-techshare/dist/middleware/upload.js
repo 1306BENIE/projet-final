@@ -11,6 +11,7 @@ exports.cloudinary = cloudinary_1.default;
 const logger_1 = require("../utils/logger");
 const path_1 = __importDefault(require("path"));
 const errors_1 = require("../utils/errors");
+// Configure storage
 const storage = new multer_storage_cloudinary_1.CloudinaryStorage({
     cloudinary: cloudinary_1.default,
     params: {
@@ -19,10 +20,11 @@ const storage = new multer_storage_cloudinary_1.CloudinaryStorage({
         transformation: [{ width: 1000, height: 1000, crop: "limit" }],
     },
 });
+// Create multer upload instance
 exports.uploadMiddleware = (0, multer_1.default)({
     storage: storage,
     limits: {
-        fileSize: 5 * 1024 * 1024,
+        fileSize: 5 * 1024 * 1024, // 5MB max file size
     },
     fileFilter: (_req, file, cb) => {
         const allowedTypes = ["image/jpeg", "image/png", "image/gif"];
@@ -36,6 +38,7 @@ exports.uploadMiddleware = (0, multer_1.default)({
         cb(null, true);
     },
 }).single("image");
+// Configuration du stockage
 const diskStorage = multer_1.default.diskStorage({
     destination: (_req, _file, cb) => {
         cb(null, "uploads/");
@@ -45,11 +48,14 @@ const diskStorage = multer_1.default.diskStorage({
         cb(null, file.fieldname + "-" + uniqueSuffix + path_1.default.extname(file.originalname));
     },
 });
+// Filtre des fichiers
 const diskFileFilter = (_req, file, cb) => {
+    // Vérification du type de fichier
     if (!file.mimetype.startsWith("image/")) {
         cb(new errors_1.ValidationError("Seuls les fichiers images sont autorisés"));
         return;
     }
+    // Vérification de l'extension
     const allowedExtensions = [".jpg", ".jpeg", ".png", ".gif"];
     const ext = path_1.default.extname(file.originalname).toLowerCase();
     if (!allowedExtensions.includes(ext)) {
@@ -58,11 +64,12 @@ const diskFileFilter = (_req, file, cb) => {
     }
     cb(null, true);
 };
+// Configuration de multer
 exports.diskUploadMiddleware = (0, multer_1.default)({
     storage: diskStorage,
     fileFilter: diskFileFilter,
     limits: {
-        fileSize: 5 * 1024 * 1024,
+        fileSize: 5 * 1024 * 1024, // 5MB max
     },
 });
 //# sourceMappingURL=upload.js.map

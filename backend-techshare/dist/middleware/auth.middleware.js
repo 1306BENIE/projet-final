@@ -8,9 +8,8 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = require("../models/User");
 const logger_1 = require("../utils/logger");
 const auth = async (req, res, next) => {
-    var _a;
     try {
-        const token = (_a = req.header("Authorization")) === null || _a === void 0 ? void 0 : _a.replace("Bearer ", "");
+        const token = req.header("Authorization")?.replace("Bearer ", "");
         if (!token) {
             return res.status(401).json({ message: "Authentication required" });
         }
@@ -34,9 +33,10 @@ const auth = async (req, res, next) => {
 exports.auth = auth;
 const adminAuth = async (req, res, next) => {
     try {
+        // First check if user is authenticated
         await (0, exports.auth)(req, res, () => {
-            var _a;
-            if (((_a = req.user) === null || _a === void 0 ? void 0 : _a.role) !== "admin") {
+            // Then check if user is admin
+            if (req.user?.role !== "admin") {
                 return res
                     .status(403)
                     .json({ message: "Access denied. Admin privileges required." });

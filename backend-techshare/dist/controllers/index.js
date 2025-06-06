@@ -15,19 +15,24 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.adminController = exports.reportController = exports.statsController = exports.paymentController = exports.categoryController = exports.notificationController = exports.recommendationController = exports.searchController = exports.reviewController = exports.rentalController = exports.toolController = exports.userController = void 0;
+// Contrôleurs d'authentification et de profil
 __exportStar(require("./authController"), exports);
 __exportStar(require("./profileController"), exports);
 __exportStar(require("./passwordController"), exports);
+// Contrôleurs d'administration
 __exportStar(require("./adminController"), exports);
 __exportStar(require("./adminUserController"), exports);
+// Contrôleurs de fonctionnalités principales
 __exportStar(require("./toolController"), exports);
 __exportStar(require("./rentalController"), exports);
 __exportStar(require("./reviewController"), exports);
 __exportStar(require("./categoryController"), exports);
 __exportStar(require("./paymentController"), exports);
 __exportStar(require("./notificationController"), exports);
+// Contrôleurs de recherche et recommandation
 __exportStar(require("./searchController"), exports);
 __exportStar(require("./recommendationController"), exports);
+// Contrôleurs de statistiques et rapports
 __exportStar(require("./statsController"), exports);
 __exportStar(require("./reportController"), exports);
 var userController_1 = require("./userController");

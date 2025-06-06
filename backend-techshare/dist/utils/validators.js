@@ -7,16 +7,19 @@ const validateEmail = (email) => {
 };
 exports.validateEmail = validateEmail;
 const validatePassword = (password) => {
+    // Au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     return passwordRegex.test(password);
 };
 exports.validatePassword = validatePassword;
 const validatePhoneNumber = (phone) => {
+    // Format français : +33 ou 0 suivi de 9 chiffres
     const phoneRegex = /^(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}$/;
     return phoneRegex.test(phone);
 };
 exports.validatePhoneNumber = validatePhoneNumber;
 const validatePostalCode = (postalCode) => {
+    // Code postal français : 5 chiffres
     const postalCodeRegex = /^[0-9]{5}$/;
     return postalCodeRegex.test(postalCode);
 };
@@ -30,7 +33,7 @@ const validateDate = (date) => {
 };
 exports.validateDate = validateDate;
 const validatePrice = (price) => {
-    return price >= 0 && price <= 1000000;
+    return price >= 0 && price <= 1000000; // Prix maximum de 1 million
 };
 exports.validatePrice = validatePrice;
 const validateRating = (rating) => {

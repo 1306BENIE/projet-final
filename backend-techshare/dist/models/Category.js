@@ -64,8 +64,10 @@ const categorySchema = new mongoose_1.Schema({
 }, {
     timestamps: true,
 });
+// Index pour la recherche rapide
 categorySchema.index({ slug: 1 });
 categorySchema.index({ name: "text" });
+// Middleware pour logger les opérations
 categorySchema.pre("save", function (next) {
     logger_1.logger.debug("Sauvegarde d'une catégorie", {
         categoryId: this._id,

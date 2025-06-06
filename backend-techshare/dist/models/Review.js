@@ -68,7 +68,9 @@ const reviewSchema = new mongoose_1.Schema({
 }, {
     timestamps: true,
 });
+// Index pour éviter les doublons d'avis
 reviewSchema.index({ user: 1, rental: 1 }, { unique: true });
+// Middleware pour logger les opérations
 reviewSchema.pre("save", function (next) {
     logger_1.logger.debug("Sauvegarde d'un avis", {
         reviewId: this._id,

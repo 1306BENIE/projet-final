@@ -54,6 +54,7 @@ class EmailService {
     }
     async sendWelcomeEmail(user) {
         try {
+            // TODO: Implémenter l'envoi d'email avec un service d'email
             logger_1.logger.info(`Email de bienvenue envoyé à ${user.email}`);
         }
         catch (error) {

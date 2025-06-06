@@ -10,9 +10,8 @@ const joi_1 = __importDefault(require("joi"));
 const User_1 = require("../models/User");
 const errors_1 = require("../utils/errors");
 const auth = async (req, _res, next) => {
-    var _a;
     try {
-        const token = (_a = req.header("Authorization")) === null || _a === void 0 ? void 0 : _a.replace("Bearer ", "");
+        const token = req.header("Authorization")?.replace("Bearer ", "");
         if (!token) {
             throw new errors_1.ValidationError("Authentification requise");
         }
@@ -36,9 +35,8 @@ const auth = async (req, _res, next) => {
 };
 exports.auth = auth;
 const adminMiddleware = async (req, res, next) => {
-    var _a;
     try {
-        if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.role) || req.user.role !== "admin") {
+        if (!req.user?.role || req.user.role !== "admin") {
             throw new errors_1.AuthenticationError("Accès administrateur requis", 403);
         }
         next();

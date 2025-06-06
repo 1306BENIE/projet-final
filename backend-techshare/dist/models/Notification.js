@@ -84,7 +84,9 @@ const notificationSchema = new mongoose_1.Schema({
 }, {
     timestamps: true,
 });
+// Index pour la recherche rapide des notifications non lues
 notificationSchema.index({ recipient: 1, isRead: 1 });
+// Middleware pour logger les opérations
 notificationSchema.pre("save", function (next) {
     logger_1.logger.debug("Sauvegarde d'une notification", {
         notificationId: this._id,

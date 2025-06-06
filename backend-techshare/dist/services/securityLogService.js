@@ -4,12 +4,12 @@ exports.securityLogService = void 0;
 const mongoose_1 = require("mongoose");
 const logger_1 = require("../utils/logger");
 const securityLogSchema = new mongoose_1.Schema({
-    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: "User" },
+    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
     action: { type: String, required: true },
     ipAddress: { type: String, required: true },
     userAgent: { type: String, required: true },
     status: { type: String, enum: ["success", "failure"], required: true },
-    details: { type: mongoose_1.Schema.Types.Mixed },
+    details: { type: String },
     createdAt: { type: Date, default: Date.now },
 });
 const SecurityLog = (0, mongoose_1.model)("SecurityLog", securityLogSchema);

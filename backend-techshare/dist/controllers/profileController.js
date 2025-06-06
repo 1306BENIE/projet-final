@@ -5,10 +5,10 @@ const User_1 = require("../models/User");
 const Rental_1 = require("../models/Rental");
 const errors_1 = require("../utils/errors");
 exports.profileController = {
+    // Get user profile
     async getProfile(req, res, next) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+            if (!req.user?.userId) {
                 throw new errors_1.ValidationError("Utilisateur non authentifié");
             }
             const user = await User_1.User.findById(req.user.userId).select("-password");
@@ -33,10 +33,10 @@ exports.profileController = {
             next(error);
         }
     },
+    // Update user profile
     async updateProfile(req, res, next) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+            if (!req.user?.userId) {
                 throw new errors_1.ValidationError("Utilisateur non authentifié");
             }
             const user = await User_1.User.findById(req.user.userId);
@@ -44,6 +44,7 @@ exports.profileController = {
                 throw new errors_1.DatabaseError("Utilisateur non trouvé");
             }
             const { firstName, lastName, phone, address } = req.body;
+            // Validation des données
             if (address) {
                 if (!address.street ||
                     !address.city ||
@@ -52,6 +53,7 @@ exports.profileController = {
                     throw new errors_1.ValidationError("Tous les champs de l'adresse sont requis");
                 }
             }
+            // Update user fields
             if (firstName)
                 user.firstName = firstName;
             if (lastName)
@@ -79,16 +81,17 @@ exports.profileController = {
             next(error);
         }
     },
+    // Delete user account
     async deleteAccount(req, res, next) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+            if (!req.user?.userId) {
                 throw new errors_1.ValidationError("Utilisateur non authentifié");
             }
             const user = await User_1.User.findById(req.user.userId);
             if (!user) {
                 throw new errors_1.DatabaseError("Utilisateur non trouvé");
             }
+            // Vérifier si l'utilisateur a des locations en cours
             const activeRentals = await Rental_1.Rental.find({
                 $or: [
                     { renter: user._id, status: { $in: ["pending", "active"] } },
@@ -103,6 +106,7 @@ exports.profileController = {
                     },
                 ]);
             }
+            // Supprimer l'utilisateur
             await user.deleteOne();
             res.status(200).json({ message: "Compte supprimé avec succès" });
         }

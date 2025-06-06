@@ -6,13 +6,16 @@ const logger_1 = require("../utils/logger");
 const errors_1 = require("../utils/errors");
 const emailService_1 = require("../services/emailService");
 exports.userController = {
+    // Register a new user
     async register(req, res, next) {
         try {
             const { email, password, firstName, lastName, phone, address } = req.body;
+            // Check if user already exists
             const existingUser = await User_1.User.findOne({ email });
             if (existingUser) {
                 throw new errors_1.ValidationError("Cet email est déjà utilisé");
             }
+            // Create new user
             const user = new User_1.User({
                 email,
                 password,
@@ -23,6 +26,7 @@ exports.userController = {
                 role: "user",
             });
             await user.save();
+            // Send welcome email if email service is configured
             try {
                 await emailService_1.emailService.sendWelcomeEmail(user);
             }
@@ -44,17 +48,21 @@ exports.userController = {
             next(error);
         }
     },
+    // Login user
     async login(req, res, next) {
         try {
             const { email, password } = req.body;
+            // Find user
             const user = await User_1.User.findOne({ email });
             if (!user) {
                 throw new errors_1.AuthenticationError("Email ou mot de passe incorrect");
             }
+            // Check password
             const isMatch = await user.comparePassword(password);
             if (!isMatch) {
                 throw new errors_1.AuthenticationError("Email ou mot de passe incorrect");
             }
+            // Generate token
             const token = user.generateAuthToken();
             res.json({
                 message: "Connexion réussie",
@@ -72,10 +80,10 @@ exports.userController = {
             next(error);
         }
     },
+    // Get user profile
     async getProfile(req, res, next) {
-        var _a;
         try {
-            const user = await User_1.User.findById((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId).select("-password");
+            const user = await User_1.User.findById(req.user?.userId).select("-password");
             if (!user) {
                 throw new errors_1.ValidationError("Utilisateur non trouvé");
             }
@@ -85,18 +93,20 @@ exports.userController = {
             next(error);
         }
     },
+    // Update user profile
     async updateProfile(req, res, next) {
-        var _a;
         try {
             const { firstName, lastName, currentPassword, newPassword } = req.body;
-            const user = await User_1.User.findById((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId);
+            const user = await User_1.User.findById(req.user?.userId);
             if (!user) {
                 throw new errors_1.ValidationError("Utilisateur non trouvé");
             }
+            // Update basic info
             if (firstName)
                 user.firstName = firstName;
             if (lastName)
                 user.lastName = lastName;
+            // Update password if provided
             if (currentPassword && newPassword) {
                 const isMatch = await user.comparePassword(currentPassword);
                 if (!isMatch) {
@@ -120,14 +130,15 @@ exports.userController = {
             next(error);
         }
     },
+    // Delete user account
     async deleteAccount(req, res, next) {
-        var _a;
         try {
             const { password } = req.body;
-            const user = await User_1.User.findById((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId);
+            const user = await User_1.User.findById(req.user?.userId);
             if (!user) {
                 throw new errors_1.ValidationError("Utilisateur non trouvé");
             }
+            // Verify password
             const isMatch = await user.comparePassword(password);
             if (!isMatch) {
                 throw new errors_1.ValidationError("Mot de passe incorrect");
@@ -139,6 +150,7 @@ exports.userController = {
             next(error);
         }
     },
+    // Get all users (admin only)
     async getAllUsers(req, res, next) {
         try {
             const { page = 1, limit = 10 } = req.query;
@@ -165,6 +177,7 @@ exports.userController = {
             next(error);
         }
     },
+    // Request password reset
     async requestPasswordReset(req, res, next) {
         try {
             const { email } = req.body;
@@ -174,11 +187,13 @@ exports.userController = {
             }
             const resetToken = await user.generatePasswordResetToken();
             await user.save();
+            // Send reset email if email service is configured
             try {
                 await emailService_1.emailService.sendPasswordResetEmail(user, resetToken);
             }
             catch (error) {
                 logger_1.logger.warn("Impossible d'envoyer l'email de réinitialisation:", error);
+                // Continue with the response even if email fails
             }
             res.json({ message: "Email de réinitialisation envoyé" });
         }
@@ -186,6 +201,7 @@ exports.userController = {
             next(error);
         }
     },
+    // Reset password
     async resetPassword(req, res, next) {
         try {
             const { token, newPassword } = req.body;

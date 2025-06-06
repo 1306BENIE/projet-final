@@ -92,6 +92,7 @@ class NotificationService {
     }
     async createNotification(data) {
         try {
+            // Validation des données
             if (!data.recipient) {
                 throw new errors_1.ValidationError("Destinataire requis");
             }
@@ -102,6 +103,7 @@ class NotificationService {
                 throw new errors_1.ValidationError("Titre et message requis");
             }
             const notification = await Notification_1.Notification.create(data);
+            // Envoyer la notification en temps réel
             const socketId = this.userSockets.get(data.recipient);
             if (socketId) {
                 this.io.to(socketId).emit("newNotification", notification);
@@ -215,6 +217,7 @@ class NotificationService {
     }
     renderTemplate(template, data) {
         try {
+            // Templates de base pour différents types d'emails
             const templates = {
                 "rental-confirmation": (data) => `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -272,6 +275,7 @@ class NotificationService {
             if (!notification) {
                 throw new errors_1.NotificationError("Notification non trouvée", 404);
             }
+            // Envoyer la mise à jour en temps réel
             const socketId = this.userSockets.get(userId);
             if (socketId) {
                 this.io.to(socketId).emit("notificationUpdated", notification);
@@ -300,6 +304,7 @@ class NotificationService {
             if (!notification) {
                 throw new errors_1.NotificationError("Notification non trouvée", 404);
             }
+            // Envoyer la suppression en temps réel
             const socketId = this.userSockets.get(userId);
             if (socketId) {
                 this.io.to(socketId).emit("notificationDeleted", notificationId);

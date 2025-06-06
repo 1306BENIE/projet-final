@@ -4,6 +4,7 @@ exports.adminUserController = void 0;
 const User_1 = require("../models/User");
 const logger_1 = require("../utils/logger");
 const securityLogService_1 = require("../services/securityLogService");
+// Ajouter un gestionnaire d'erreurs centralisé
 const handleError = (error, res, message) => {
     logger_1.logger.error(`${message}:`, error);
     if (error.name === "ValidationError") {
@@ -17,16 +18,19 @@ const handleError = (error, res, message) => {
     return;
 };
 exports.adminUserController = {
+    // Get all users with pagination, sorting, search and filtering
     async getAllUsers(req, res) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) || req.user.role !== "admin") {
+            if (!req.user?.userId || req.user.role !== "admin") {
                 res.status(403).json({ message: "Admin access required" });
                 return;
             }
+            // Récupération des paramètres
             const { page = 1, limit = 10, sortBy = "createdAt", sortOrder = "desc", search, role, } = req.query;
             const skip = (Number(page) - 1) * Number(limit);
+            // Construction de la requête
             let query = {};
+            // Ajout de la recherche
             if (search) {
                 query.$or = [
                     { firstName: { $regex: search, $options: "i" } },
@@ -34,14 +38,17 @@ exports.adminUserController = {
                     { email: { $regex: search, $options: "i" } },
                 ];
             }
+            // Ajout du filtre par rôle
             if (role) {
                 query.role = role;
             }
+            // Exécution de la requête avec pagination et tri
             const users = await User_1.User.find(query)
                 .select("-password")
                 .sort({ [sortBy]: sortOrder === "desc" ? -1 : 1 })
                 .skip(skip)
                 .limit(Number(limit));
+            // Comptage total des utilisateurs
             const total = await User_1.User.countDocuments(query);
             res.json({
                 users,
@@ -57,10 +64,10 @@ exports.adminUserController = {
             handleError(error, res, "Error fetching users");
         }
     },
+    // Ban a user
     async banUser(req, res) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) || req.user.role !== "admin") {
+            if (!req.user?.userId || req.user.role !== "admin") {
                 res.status(403).json({ message: "Admin access required" });
                 return;
             }
@@ -73,6 +80,7 @@ exports.adminUserController = {
             }
             user.isBanned = true;
             await user.save();
+            // Log the action
             await securityLogService_1.securityLogService.logAction({
                 action: "BAN_USER",
                 userId: req.user.userId,
@@ -87,10 +95,10 @@ exports.adminUserController = {
             handleError(error, res, "Error banning user");
         }
     },
+    // Unban a user
     async unbanUser(req, res) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) || req.user.role !== "admin") {
+            if (!req.user?.userId || req.user.role !== "admin") {
                 res.status(403).json({ message: "Admin access required" });
                 return;
             }
@@ -102,6 +110,7 @@ exports.adminUserController = {
             }
             user.isBanned = false;
             await user.save();
+            // Log the action
             await securityLogService_1.securityLogService.logAction({
                 action: "UNBAN_USER",
                 userId: req.user.userId,

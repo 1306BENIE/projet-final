@@ -5,6 +5,7 @@ const models_1 = require("../models");
 const errors_1 = require("../utils/errors");
 const mongoose_1 = require("mongoose");
 const securityLogService_1 = require("../services/securityLogService");
+// Constantes de validation
 const MIN_PRICE = 0;
 const MAX_PRICE = 10000;
 const MIN_DESCRIPTION_LENGTH = 10;
@@ -19,16 +20,17 @@ const VALID_CATEGORIES = [
     "autre",
 ];
 exports.toolController = {
+    // Créer un nouvel outil
     async createTool(req, res, next) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+            if (!req.user?.userId) {
                 throw new errors_1.AuthenticationError("Non autorisé");
             }
             const toolData = {
                 ...req.body,
                 owner: new mongoose_1.Types.ObjectId(req.user.userId),
             };
+            // Validation des champs requis
             if (!toolData.name ||
                 !toolData.description ||
                 !toolData.category ||
@@ -40,22 +42,28 @@ exports.toolController = {
                     { field: "dailyPrice", message: "Le prix journalier est requis" },
                 ]);
             }
+            // Validation du nom
             if (toolData.name.length < 3) {
                 throw new errors_1.ValidationError("Le nom doit contenir au moins 3 caractères");
             }
+            // Validation de la description
             if (toolData.description.length < MIN_DESCRIPTION_LENGTH ||
                 toolData.description.length > MAX_DESCRIPTION_LENGTH) {
                 throw new errors_1.ValidationError(`La description doit contenir entre ${MIN_DESCRIPTION_LENGTH} et ${MAX_DESCRIPTION_LENGTH} caractères`);
             }
+            // Validation de la catégorie
             if (!VALID_CATEGORIES.includes(toolData.category.toLowerCase())) {
                 throw new errors_1.ValidationError("Catégorie invalide");
             }
+            // Validation du prix
             if (toolData.dailyPrice < MIN_PRICE || toolData.dailyPrice > MAX_PRICE) {
                 throw new errors_1.ValidationError(`Le prix journalier doit être compris entre ${MIN_PRICE} et ${MAX_PRICE}`);
             }
+            // Validation des images
             if (toolData.images && toolData.images.length > MAX_IMAGES) {
                 throw new errors_1.ValidationError(`Le nombre maximum d'images est de ${MAX_IMAGES}`);
             }
+            // Validation des dates de disponibilité
             if (toolData.availability) {
                 const { startDate, endDate } = toolData.availability;
                 const now = new Date();
@@ -66,6 +74,7 @@ exports.toolController = {
                     throw new errors_1.ValidationError("La date de début doit être antérieure à la date de fin");
                 }
             }
+            // Validation de la localisation
             if (toolData.location) {
                 const { coordinates } = toolData.location;
                 if (!coordinates ||
@@ -79,6 +88,7 @@ exports.toolController = {
             }
             const tool = new models_1.Tool(toolData);
             await tool.save();
+            // Journalisation de l'événement
             await securityLogService_1.securityLogService.logEvent(new mongoose_1.Types.ObjectId(req.user.userId), "tool_created", "Nouvel outil créé");
             const response = {
                 message: "Outil créé avec succès",
@@ -90,10 +100,12 @@ exports.toolController = {
             next(error);
         }
     },
+    // Obtenir tous les outils avec filtres
     async getTools(req, res, next) {
         try {
             const filters = req.query;
             let query = {};
+            // Appliquer les filtres
             if (filters.category) {
                 if (!VALID_CATEGORIES.includes(filters.category.toLowerCase())) {
                     throw new errors_1.ValidationError("Catégorie invalide");
@@ -123,6 +135,7 @@ exports.toolController = {
                 }
                 query.status = filters.status;
             }
+            // Filtre de disponibilité par date
             if (filters.startDate || filters.endDate) {
                 query.availability = {};
                 if (filters.startDate) {
@@ -143,6 +156,7 @@ exports.toolController = {
                     query.availability.endDate = { $gte: endDate };
                 }
             }
+            // Recherche basée sur la localisation
             if (filters.location && filters.radius) {
                 const [longitude, latitude] = filters.location.split(",").map(Number);
                 if (isNaN(longitude) ||
@@ -163,7 +177,7 @@ exports.toolController = {
                             type: "Point",
                             coordinates: [longitude, latitude],
                         },
-                        $maxDistance: radius * 1000,
+                        $maxDistance: radius * 1000, // Convert km to meters
                     },
                 };
             }
@@ -180,6 +194,7 @@ exports.toolController = {
             next(error);
         }
     },
+    // Obtenir un outil par ID
     async getToolById(req, res, next) {
         try {
             const { id } = req.params;
@@ -208,10 +223,10 @@ exports.toolController = {
             next(error);
         }
     },
+    // Mettre à jour un outil
     async updateTool(req, res, next) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+            if (!req.user?.userId) {
                 throw new errors_1.AuthenticationError("Non autorisé");
             }
             const { id } = req.params;
@@ -222,13 +237,16 @@ exports.toolController = {
             if (!tool) {
                 throw new errors_1.DatabaseError("Outil non trouvé");
             }
+            // Vérifier si l'utilisateur est le propriétaire
             if (tool.owner.toString() !== req.user.userId) {
                 throw new errors_1.AuthenticationError("Non autorisé à modifier cet outil");
             }
+            // Vérifier si l'outil peut être modifié
             if (tool.status === "rented") {
                 throw new errors_1.ValidationError("Impossible de modifier un outil en cours de location");
             }
             const updates = req.body;
+            // Validation des mises à jour
             if (updates.name && updates.name.length < 3) {
                 throw new errors_1.ValidationError("Le nom doit contenir au moins 3 caractères");
             }
@@ -275,6 +293,7 @@ exports.toolController = {
             if (!updatedTool) {
                 throw new errors_1.DatabaseError("Erreur lors de la mise à jour de l'outil");
             }
+            // Journalisation de l'événement
             await securityLogService_1.securityLogService.logEvent(new mongoose_1.Types.ObjectId(req.user.userId), "tool_updated", "Outil mis à jour");
             const response = {
                 message: "Outil mis à jour avec succès",
@@ -286,10 +305,10 @@ exports.toolController = {
             next(error);
         }
     },
+    // Supprimer un outil
     async deleteTool(req, res, next) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+            if (!req.user?.userId) {
                 throw new errors_1.AuthenticationError("Non autorisé");
             }
             const { id } = req.params;
@@ -300,13 +319,16 @@ exports.toolController = {
             if (!tool) {
                 throw new errors_1.DatabaseError("Outil non trouvé");
             }
+            // Vérifier si l'utilisateur est le propriétaire
             if (tool.owner.toString() !== req.user.userId) {
                 throw new errors_1.AuthenticationError("Non autorisé à supprimer cet outil");
             }
+            // Vérifier si l'outil peut être supprimé
             if (tool.status === "rented") {
                 throw new errors_1.ValidationError("Impossible de supprimer un outil en cours de location");
             }
             await models_1.Tool.deleteOne({ _id: id });
+            // Journalisation de l'événement
             await securityLogService_1.securityLogService.logEvent(new mongoose_1.Types.ObjectId(req.user.userId), "tool_deleted", "Outil supprimé");
             const response = {
                 message: "Outil supprimé avec succès",
@@ -317,10 +339,10 @@ exports.toolController = {
             next(error);
         }
     },
+    // Obtenir les outils d'un utilisateur
     async getUserTools(req, res, next) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId)) {
+            if (!req.user?.userId) {
                 throw new errors_1.AuthenticationError("Non autorisé");
             }
             const tools = await models_1.Tool.find({ owner: req.user.userId })

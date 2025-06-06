@@ -4,6 +4,7 @@ const express_1 = require("express");
 const controllers_1 = require("../controllers");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
+// Routes protégées (admin uniquement)
 router.get("/security-logs", auth_1.auth, controllers_1.reportController.getSecurityLogs);
 router.get("/activity-logs", auth_1.auth, controllers_1.reportController.getActivityLogs);
 router.get("/error-logs", auth_1.auth, controllers_1.reportController.getErrorLogs);

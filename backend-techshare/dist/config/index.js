@@ -6,7 +6,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.config = void 0;
 const dotenv_1 = __importDefault(require("dotenv"));
 const logger_1 = require("../utils/logger");
+// Charger les variables d'environnement
 dotenv_1.default.config();
+// Vérifier les variables d'environnement requises
 const requiredEnvVars = [
     "MONGODB_URI",
     "JWT_SECRET",
@@ -48,6 +50,7 @@ exports.config = {
         url: process.env.REDIS_URL || "redis://localhost:6379",
     },
 };
+// Valider la configuration
 try {
     if (!exports.config.jwtSecret || exports.config.jwtSecret === "your-secret-key") {
         throw new Error("JWT_SECRET doit être défini et différent de la valeur par défaut");

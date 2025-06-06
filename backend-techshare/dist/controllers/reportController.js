@@ -7,6 +7,7 @@ const Rental_1 = require("../models/Rental");
 const Tool_1 = require("../models/Tool");
 const User_1 = require("../models/User");
 const Review_1 = require("../models/Review");
+// Ajouter un gestionnaire d'erreurs centralisé
 const handleError = (error, res, message) => {
     logger_1.logger.error(`${message}:`, error);
     if (error.name === "ValidationError") {
@@ -20,10 +21,10 @@ const handleError = (error, res, message) => {
     return;
 };
 exports.reportController = {
+    // Get security logs (admin only)
     async getSecurityLogs(req, res) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) || req.user.role !== "admin") {
+            if (!req.user?.userId || req.user.role !== "admin") {
                 res.status(403).json({ message: "Admin access required" });
                 return;
             }
@@ -47,10 +48,10 @@ exports.reportController = {
             handleError(error, res, "Error fetching security logs");
         }
     },
+    // Generate activity report (admin only)
     async generateActivityReport(req, res) {
-        var _a, _b;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) || req.user.role !== "admin") {
+            if (!req.user?.userId || req.user.role !== "admin") {
                 res.status(403).json({ message: "Admin access required" });
                 return;
             }
@@ -83,7 +84,7 @@ exports.reportController = {
                     newTools,
                     newRentals,
                     completedRentals,
-                    revenue: ((_b = revenue[0]) === null || _b === void 0 ? void 0 : _b.total) || 0,
+                    revenue: revenue[0]?.total || 0,
                 },
             });
         }
@@ -91,10 +92,10 @@ exports.reportController = {
             handleError(error, res, "Error generating activity report");
         }
     },
+    // Generate user report (admin only)
     async generateUserReport(req, res) {
-        var _a, _b;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) || req.user.role !== "admin") {
+            if (!req.user?.userId || req.user.role !== "admin") {
                 res.status(403).json({ message: "Admin access required" });
                 return;
             }
@@ -122,7 +123,7 @@ exports.reportController = {
                         active: activeRentals,
                         completed: completedRentals,
                     },
-                    totalSpent: ((_b = totalSpent[0]) === null || _b === void 0 ? void 0 : _b.total) || 0,
+                    totalSpent: totalSpent[0]?.total || 0,
                 },
                 securityLogs,
             });
@@ -131,10 +132,10 @@ exports.reportController = {
             handleError(error, res, "Error generating user report");
         }
     },
+    // Generate tool report (admin only)
     async generateToolReport(req, res) {
-        var _a, _b;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) || req.user.role !== "admin") {
+            if (!req.user?.userId || req.user.role !== "admin") {
                 res.status(403).json({ message: "Admin access required" });
                 return;
             }
@@ -162,7 +163,7 @@ exports.reportController = {
                         active: activeRentals,
                         completed: completedRentals,
                     },
-                    totalRevenue: ((_b = totalRevenue[0]) === null || _b === void 0 ? void 0 : _b.total) || 0,
+                    totalRevenue: totalRevenue[0]?.total || 0,
                 },
                 securityLogs,
             });
@@ -171,10 +172,10 @@ exports.reportController = {
             handleError(error, res, "Error generating tool report");
         }
     },
+    // Get activity logs (admin only)
     async getActivityLogs(req, res) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) || req.user.role !== "admin") {
+            if (!req.user?.userId || req.user.role !== "admin") {
                 res.status(403).json({ message: "Admin access required" });
                 return;
             }
@@ -199,10 +200,10 @@ exports.reportController = {
             handleError(error, res, "Error fetching activity logs");
         }
     },
+    // Get error logs (admin only)
     async getErrorLogs(req, res) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) || req.user.role !== "admin") {
+            if (!req.user?.userId || req.user.role !== "admin") {
                 res.status(403).json({ message: "Admin access required" });
                 return;
             }
@@ -227,10 +228,10 @@ exports.reportController = {
             handleError(error, res, "Error fetching error logs");
         }
     },
+    // Get user activity (admin only)
     async getUserActivity(req, res) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) || req.user.role !== "admin") {
+            if (!req.user?.userId || req.user.role !== "admin") {
                 res.status(403).json({ message: "Admin access required" });
                 return;
             }
@@ -259,10 +260,10 @@ exports.reportController = {
             handleError(error, res, "Error fetching user activity");
         }
     },
+    // Get tool activity (admin only)
     async getToolActivity(req, res) {
-        var _a;
         try {
-            if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.userId) || req.user.role !== "admin") {
+            if (!req.user?.userId || req.user.role !== "admin") {
                 res.status(403).json({ message: "Admin access required" });
                 return;
             }
