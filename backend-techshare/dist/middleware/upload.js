@@ -37,7 +37,7 @@ exports.uploadMiddleware = (0, multer_1.default)({
         }
         cb(null, true);
     },
-}).single("image");
+}).array("images", 5);
 // Configuration du stockage
 const diskStorage = multer_1.default.diskStorage({
     destination: (_req, _file, cb) => {

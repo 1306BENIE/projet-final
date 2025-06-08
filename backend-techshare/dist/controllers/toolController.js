@@ -16,7 +16,7 @@ const VALID_CATEGORIES = [
     "jardinage",
     "nettoyage",
     "cuisine",
-    "électronique",
+    "informatique",
     "autre",
 ];
 exports.toolController = {
@@ -26,10 +26,23 @@ exports.toolController = {
             if (!req.user?.userId) {
                 throw new errors_1.AuthenticationError("Non autorisé");
             }
+            // Conversion explicite des champs numériques
+            if (req.body.dailyPrice)
+                req.body.dailyPrice = Number(req.body.dailyPrice);
+            if (req.body.price)
+                req.body.price = Number(req.body.price);
             const toolData = {
                 ...req.body,
                 owner: new mongoose_1.Types.ObjectId(req.user.userId),
             };
+            // Récupérer les URLs des images uploadées
+            let images = [];
+            if (req.files && Array.isArray(req.files)) {
+                images = req.files
+                    .map((file) => file.path || file.secure_url || file.location || file.url)
+                    .filter(Boolean);
+            }
+            toolData.images = images;
             // Validation des champs requis
             if (!toolData.name ||
                 !toolData.description ||
@@ -245,6 +258,11 @@ exports.toolController = {
             if (tool.status === "rented") {
                 throw new errors_1.ValidationError("Impossible de modifier un outil en cours de location");
             }
+            // Conversion explicite des champs numériques
+            if (req.body.dailyPrice)
+                req.body.dailyPrice = Number(req.body.dailyPrice);
+            if (req.body.price)
+                req.body.price = Number(req.body.price);
             const updates = req.body;
             // Validation des mises à jour
             if (updates.name && updates.name.length < 3) {

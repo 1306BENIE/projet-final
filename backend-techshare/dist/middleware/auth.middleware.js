@@ -14,7 +14,8 @@ const auth = async (req, res, next) => {
             return res.status(401).json({ message: "Authentication required" });
         }
         const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
-        const user = await User_1.User.findById(decoded._id);
+        const userId = decoded.userId || decoded._id;
+        const user = await User_1.User.findById(userId);
         if (!user) {
             return res.status(401).json({ message: "User not found" });
         }

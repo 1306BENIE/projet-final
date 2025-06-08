@@ -20,7 +20,23 @@ const VALID_CATEGORIES = [
 ];
 const validateTool = (req, _res, next) => {
     try {
-        const { name, description, category, price, location } = req.body;
+        // Harmonisation : accepter dailyPrice ou price, et convertir en nombre
+        if (req.body.price && !req.body.dailyPrice) {
+            req.body.dailyPrice = req.body.price;
+        }
+        if (req.body.dailyPrice) {
+            req.body.dailyPrice = Number(req.body.dailyPrice);
+        }
+        // Parsing automatique du champ location si c'est une string JSON
+        if (typeof req.body.location === "string") {
+            try {
+                req.body.location = JSON.parse(req.body.location);
+            }
+            catch (e) {
+                throw new errors_1.ValidationError("Le champ location doit être un objet JSON valide");
+            }
+        }
+        const { name, description, category, dailyPrice, location } = req.body;
         // Validation du nom
         if (!name || typeof name !== "string") {
             throw new errors_1.ValidationError("Le nom est requis et doit être une chaîne de caractères");
@@ -49,10 +65,13 @@ const validateTool = (req, _res, next) => {
             throw new errors_1.ValidationError(`La catégorie doit être l'une des suivantes : ${VALID_CATEGORIES.join(", ")}`);
         }
         // Validation du prix
-        if (!price || typeof price !== "number") {
+        if (dailyPrice === undefined || dailyPrice === null || isNaN(dailyPrice)) {
             throw new errors_1.ValidationError("Le prix est requis et doit être un nombre");
         }
-        if (price < MIN_PRICE || price > MAX_PRICE) {
+        if (typeof dailyPrice !== "number") {
+            throw new errors_1.ValidationError("Le prix doit être un nombre");
+        }
+        if (dailyPrice < MIN_PRICE || dailyPrice > MAX_PRICE) {
             throw new errors_1.ValidationError(`Le prix doit être compris entre ${MIN_PRICE} et ${MAX_PRICE}`);
         }
         // Validation de la localisation

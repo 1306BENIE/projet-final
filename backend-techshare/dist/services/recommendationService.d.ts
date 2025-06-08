@@ -38,15 +38,15 @@ declare class RecommendationService {
      */
     private generateRecommendations;
     /**
-     * Récupère les outils les plus populaires avec pagination et filtrage
-     * @param options - Options de pagination et filtrage
-     * @returns Liste des outils populaires et nombre total
+     * Récupère les outils les plus populaires
+     * @param options - Options de recherche
+     * @returns Liste des outils populaires
      */
     getPopularTools(options: PopularToolsOptions): Promise<PopularToolsResult>;
     /**
-     * Trouve des outils similaires à un outil donné
+     * Récupère des outils similaires à un outil donné
      * @param toolId - ID de l'outil de référence
-     * @param limit - Nombre maximum d'outils similaires à retourner
+     * @param limit - Nombre maximum d'outils similaires
      * @returns Liste des outils similaires
      */
     getSimilarTools(toolId: string, limit?: number): Promise<ITool[]>;

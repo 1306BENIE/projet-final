@@ -89,7 +89,7 @@ exports.rentalController = {
             }
             // Create Stripe payment intent
             const paymentIntent = await stripe.paymentIntents.create({
-                amount: Math.round((totalPrice + tool.deposit) * 100), // Convert to cents and ensure integer
+                amount: Math.round((totalPrice + tool.caution) * 100), // Convert to cents and ensure integer
                 currency: "usd",
                 metadata: {
                     toolId,
@@ -106,7 +106,7 @@ exports.rentalController = {
                 startDate: startDateTime,
                 endDate: endDateTime,
                 totalPrice,
-                deposit: tool.deposit,
+                deposit: tool.caution,
                 paymentIntentId: paymentIntent.id,
                 status: "pending",
                 paymentStatus: "pending",

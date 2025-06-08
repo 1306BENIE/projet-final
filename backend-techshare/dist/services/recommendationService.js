@@ -90,8 +90,8 @@ class RecommendationService {
                     const categoryCount = preferences.categories.get(tool.category.toString()) || 0;
                     preferences.categories.set(tool.category.toString(), categoryCount + 1);
                     // Prix
-                    preferences.priceRange.min = Math.min(preferences.priceRange.min, tool.price);
-                    preferences.priceRange.max = Math.max(preferences.priceRange.max, tool.price);
+                    preferences.priceRange.min = Math.min(preferences.priceRange.min, tool.dailyPrice);
+                    preferences.priceRange.max = Math.max(preferences.priceRange.max, tool.dailyPrice);
                     // Localisation
                     if (tool.location) {
                         preferences.locations.add(tool.location.coordinates.join(","));
@@ -134,7 +134,7 @@ class RecommendationService {
                 query.category = { $in: categoryIds };
             }
             if (priceRange.min !== Infinity && priceRange.max !== 0) {
-                query.price = {
+                query.dailyPrice = {
                     $gte: priceRange.min * 0.8, // 20% de marge
                     $lte: priceRange.max * 1.2,
                 };
@@ -153,20 +153,20 @@ class RecommendationService {
                 score += categoryWeight * 2;
                 // Score basé sur le prix
                 const priceScore = 1 -
-                    Math.abs(tool.price - (priceRange.min + priceRange.max) / 2) /
+                    Math.abs(tool.dailyPrice - (priceRange.min + priceRange.max) / 2) /
                         priceRange.max;
                 score += priceScore * 1.5;
                 // Score basé sur la note
                 score += tool.rating * 2;
                 // Score basé sur le nombre de locations
-                score += Math.log(tool.rentalCount + 1);
+                score += Math.min(tool.rentalCount / 10, 2);
                 return { tool, score };
             });
-            // Trier par score et retourner les meilleurs résultats
+            // Trier les outils par score et retourner les meilleurs
             return scoredTools
                 .sort((a, b) => b.score - a.score)
                 .slice(0, limit)
-                .map((item) => item.tool);
+                .map((st) => st.tool);
         }
         catch (error) {
             logger_1.logger.error("Erreur lors de la génération des recommandations:", error);
@@ -174,19 +174,16 @@ class RecommendationService {
         }
     }
     /**
-     * Récupère les outils les plus populaires avec pagination et filtrage
-     * @param options - Options de pagination et filtrage
-     * @returns Liste des outils populaires et nombre total
+     * Récupère les outils les plus populaires
+     * @param options - Options de recherche
+     * @returns Liste des outils populaires
      */
     async getPopularTools(options) {
         try {
-            const { page, limit, category, timeRange } = options;
+            const { page = 1, limit = 10, category, timeRange = "month" } = options;
             // Calculer la date de début en fonction de la période
             const startDate = new Date();
             switch (timeRange) {
-                case "day":
-                    startDate.setDate(startDate.getDate() - 1);
-                    break;
                 case "week":
                     startDate.setDate(startDate.getDate() - 7);
                     break;
@@ -201,21 +198,21 @@ class RecommendationService {
             }
             // Construire la requête
             const query = {
-                isAvailable: true,
+                status: "available",
                 createdAt: { $gte: startDate },
             };
             if (category) {
-                query.category = new mongoose_1.Types.ObjectId(category);
+                query.category = category;
             }
-            // Compter le nombre total d'outils
-            const total = await Tool_1.Tool.countDocuments(query);
-            // Récupérer les outils avec pagination
-            const tools = await Tool_1.Tool.find(query)
-                .populate("owner", "firstName lastName rating")
-                .populate("category", "name")
-                .sort({ rating: -1, rentalCount: -1 })
-                .skip((page - 1) * limit)
-                .limit(limit);
+            // Récupérer les outils les plus populaires
+            const [tools, total] = await Promise.all([
+                Tool_1.Tool.find(query)
+                    .populate("owner", "firstName lastName rating")
+                    .sort({ rentalCount: -1, rating: -1 })
+                    .skip((page - 1) * limit)
+                    .limit(limit),
+                Tool_1.Tool.countDocuments(query),
+            ]);
             return { tools, total };
         }
         catch (error) {
@@ -224,38 +221,37 @@ class RecommendationService {
         }
     }
     /**
-     * Trouve des outils similaires à un outil donné
+     * Récupère des outils similaires à un outil donné
      * @param toolId - ID de l'outil de référence
-     * @param limit - Nombre maximum d'outils similaires à retourner
+     * @param limit - Nombre maximum d'outils similaires
      * @returns Liste des outils similaires
      */
     async getSimilarTools(toolId, limit = 5) {
         try {
-            if (!toolId) {
-                throw new errors_1.ValidationError("ID de l'outil requis");
-            }
-            if (limit < 1 || limit > 20) {
-                throw new errors_1.ValidationError("La limite doit être comprise entre 1 et 20");
-            }
             const tool = await Tool_1.Tool.findById(toolId);
             if (!tool) {
                 throw new errors_1.ValidationError("Outil non trouvé");
             }
-            return await Tool_1.Tool.find({
-                _id: { $ne: new mongoose_1.Types.ObjectId(toolId) },
+            // Rechercher des outils similaires
+            const similarTools = await Tool_1.Tool.find({
+                _id: { $ne: tool._id },
                 category: tool.category,
-                isAvailable: true,
+                dailyPrice: {
+                    $gte: tool.dailyPrice * 0.8,
+                    $lte: tool.dailyPrice * 1.2,
+                },
+                status: "available",
             })
                 .populate("owner", "firstName lastName rating")
-                .populate("category", "name")
                 .sort({ rating: -1, rentalCount: -1 })
                 .limit(limit);
+            return similarTools;
         }
         catch (error) {
-            logger_1.logger.error("Erreur lors de la recherche d'outils similaires:", error);
+            logger_1.logger.error("Erreur lors de la récupération des outils similaires:", error);
             throw error instanceof errors_1.ValidationError
                 ? error
-                : new errors_1.DatabaseError("Erreur lors de la recherche d'outils similaires");
+                : new errors_1.DatabaseError("Erreur lors de la récupération des outils similaires");
         }
     }
 }

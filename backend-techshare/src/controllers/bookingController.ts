@@ -52,7 +52,7 @@ export const createBooking = async (req: Request, res: Response) => {
       startDate,
       endDate,
       totalPrice,
-      depositAmount: tool.deposit || 0,
+      depositAmount: tool.caution || 0,
       message,
     });
 

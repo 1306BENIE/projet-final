@@ -240,7 +240,7 @@ router.get("/:toolId", (0, validateObjectId_1.validateObjectId)("toolId"), (0, e
  *       500:
  *         description: Erreur serveur
  */
-router.post("/", auth_1.auth, upload_1.diskUploadMiddleware.array("images", 5), validateTool_1.validateTool, (0, errorHandler_1.errorHandler)(toolController_1.toolController.createTool));
+router.post("/", auth_1.auth, upload_1.uploadMiddleware, validateTool_1.validateTool, (0, errorHandler_1.errorHandler)(toolController_1.toolController.createTool));
 /**
  * @swagger
  * /api/tools/{toolId}:
@@ -311,7 +311,7 @@ router.post("/", auth_1.auth, upload_1.diskUploadMiddleware.array("images", 5), 
  *       500:
  *         description: Erreur serveur
  */
-router.put("/:toolId", auth_1.auth, (0, validateObjectId_1.validateObjectId)("toolId"), upload_1.diskUploadMiddleware.array("images", 5), validateTool_1.validateTool, (0, errorHandler_1.errorHandler)(toolController_1.toolController.updateTool));
+router.put("/:toolId", auth_1.auth, (0, validateObjectId_1.validateObjectId)("toolId"), upload_1.uploadMiddleware, validateTool_1.validateTool, (0, errorHandler_1.errorHandler)(toolController_1.toolController.updateTool));
 /**
  * @swagger
  * /api/tools/{toolId}:

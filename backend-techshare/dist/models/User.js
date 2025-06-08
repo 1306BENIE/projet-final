@@ -76,7 +76,7 @@ const userSchema = new mongoose_1.Schema({
 });
 // Méthode pour générer le token JWT
 userSchema.methods.generateAuthToken = function () {
-    return jsonwebtoken_1.default.sign({ _id: this._id.toString() }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    return jsonwebtoken_1.default.sign({ userId: this._id.toString() }, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
 // Méthode pour générer le token de réinitialisation
 userSchema.methods.generatePasswordResetToken =

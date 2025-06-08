@@ -16,12 +16,13 @@ const auth = async (req, _res, next) => {
             throw new errors_1.ValidationError("Authentification requise");
         }
         const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || "your-secret-key");
-        const user = await User_1.User.findById(decoded.userId).select("role");
+        const userId = decoded.userId || decoded._id;
+        const user = await User_1.User.findById(userId).select("role");
         if (!user) {
             throw new errors_1.ValidationError("Utilisateur non trouvé");
         }
         req.user = {
-            userId: decoded.userId,
+            userId,
             role: user.role,
         };
         next();
