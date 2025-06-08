@@ -23,11 +23,9 @@ export const auth = async (req: Request, res: Response, next: NextFunction) => {
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
-      _id: string;
-    };
-
-    const user = await User.findById(decoded._id);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
+    const userId = decoded.userId || decoded._id;
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.status(401).json({ message: "User not found" });

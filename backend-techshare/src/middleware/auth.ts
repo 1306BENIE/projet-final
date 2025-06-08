@@ -31,18 +31,16 @@ export const auth = async (
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET || "your-secret-key"
-    ) as {
-      userId: string;
-      role: string;
-    };
+    ) as any;
 
-    const user = await User.findById(decoded.userId).select("role");
+    const userId = decoded.userId || decoded._id;
+    const user = await User.findById(userId).select("role");
     if (!user) {
       throw new ValidationError("Utilisateur non trouvé");
     }
 
     req.user = {
-      userId: decoded.userId,
+      userId,
       role: user.role,
     };
 

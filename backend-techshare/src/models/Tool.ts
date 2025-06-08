@@ -9,6 +9,16 @@ const toolSchema = new Schema<ITool>(
       required: [true, "Le nom est requis"],
       trim: true,
     },
+    brand: {
+      type: String,
+      required: [true, "La marque est requise"],
+      trim: true,
+    },
+    modelName: {
+      type: String,
+      required: [true, "Le modèle est requis"],
+      trim: true,
+    },
     description: {
       type: String,
       required: [true, "La description est requise"],
@@ -17,21 +27,26 @@ const toolSchema = new Schema<ITool>(
     category: {
       type: String,
       required: [true, "La catégorie est requise"],
+      enum: ["informatique", "bureautique", "multimedia", "autre"],
     },
-    price: {
-      type: Number,
-      required: [true, "Le prix est requis"],
-      min: [0, "Le prix ne peut pas être négatif"],
+    etat: {
+      type: String,
+      required: [true, "L'état est requis"],
+      enum: ["neuf", "bon_etat", "usage"],
     },
     dailyPrice: {
       type: Number,
       required: [true, "Le prix journalier est requis"],
       min: [0, "Le prix journalier ne peut pas être négatif"],
     },
-    deposit: {
+    caution: {
       type: Number,
       required: [true, "La caution est requise"],
       min: [0, "La caution ne peut pas être négative"],
+    },
+    isInsured: {
+      type: Boolean,
+      default: false,
     },
     owner: {
       type: Schema.Types.ObjectId,
@@ -50,8 +65,21 @@ const toolSchema = new Schema<ITool>(
       default: "available",
     },
     location: {
-      type: { type: String, default: "Point" },
-      coordinates: { type: [Number], default: [0, 0] },
+      type: {
+        type: String,
+        enum: ["Point"],
+        required: true,
+        default: "Point",
+      },
+      coordinates: {
+        type: [Number],
+        required: true,
+      },
+    },
+    address: {
+      type: String,
+      required: [true, "L'adresse est requise"],
+      trim: true,
     },
     rating: {
       type: Number,

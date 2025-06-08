@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Menu, LogOut, User, Wrench, Calendar } from "lucide-react";
-import { useAuth } from "@/store/auth";
+import { useAuth } from "@/store/useAuth";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);

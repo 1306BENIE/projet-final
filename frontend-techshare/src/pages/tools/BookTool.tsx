@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "@/store/auth";
+import { useAuth } from "@/store/useAuth";
 import { useBooking } from "@/hooks/useBooking";
 import BookingForm from "@/components/forms/BookingForm";
 import { Loader2 } from "lucide-react";

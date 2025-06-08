@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Mail, Lock, User, Phone, MapPin, Building, Hash } from "lucide-react";
 import { motion } from "framer-motion";
 import type { RegisterFormValues } from "@/interfaces/auth";
-import { useAuth } from "@/store/auth";
+import { useAuth } from "@/store/useAuth";
 import { useNavigate } from "react-router-dom";
 import { AxiosError } from "axios";
 import { toast } from "react-hot-toast";

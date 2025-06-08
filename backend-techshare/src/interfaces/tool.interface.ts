@@ -6,29 +6,35 @@ import { Document, Types } from "mongoose";
 export interface ITool extends Document {
   /** Nom de l'outil */
   name: string;
+  /** Marque de l'outil */
+  brand: string;
+  /** Modèle de l'outil */
+  modelName: string;
   /** Description détaillée */
   description: string;
   /** Catégorie de l'outil */
-  category: string;
-  /** Prix de vente */
-  price: number;
+  category: "informatique" | "bureautique" | "multimedia" | "autre";
+  /** État de l'outil */
+  etat: "neuf" | "bon_etat" | "usage";
   /** Prix de location journalier */
   dailyPrice: number;
   /** Montant de la caution */
-  deposit: number;
+  caution: number;
+  /** Indique si l'outil est assuré */
+  isInsured: boolean;
   /** Identifiant du propriétaire */
   owner: Types.ObjectId;
   /** Liste des URLs des images */
   images: string[];
   /** État de l'outil */
   status: "available" | "rented" | "maintenance";
-  /** Position géographique */
+  /** Position géographique (GeoJSON strict) */
   location: {
-    /** Type de géométrie (Point) */
-    type: string;
-    /** Coordonnées [longitude, latitude] */
+    type: "Point";
     coordinates: number[];
   };
+  /** Adresse séparée */
+  address: string;
   /** Note moyenne */
   rating: number;
   /** Nombre total de locations */

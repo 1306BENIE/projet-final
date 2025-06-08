@@ -119,7 +119,11 @@ export default function ToolDetail() {
             className="flex-1 flex items-center justify-center min-w-[260px] max-w-xs mx-auto md:mx-0"
           >
             <img
-              src={tool.image}
+              src={
+                tool.images && tool.images.length > 0
+                  ? tool.images[0]
+                  : "/placeholder.png"
+              }
               alt={tool.name}
               className="w-full rounded-2xl shadow-xl object-cover transition-all duration-300 hover:shadow-2xl hover:brightness-105 hover:scale-105"
               style={{ aspectRatio: "1.1/1" }}
@@ -140,7 +144,7 @@ export default function ToolDetail() {
             </h1>
             <div className="flex flex-wrap items-center gap-3 mb-2">
               <span className="text-cyan-600 font-bold text-2xl bg-cyan-50 px-4 py-1.5 rounded-xl shadow">
-                {tool.price}{" "}
+                {tool.dailyPrice} FCFA{" "}
                 <span className="text-base font-normal">/jour</span>
               </span>
               <span
@@ -188,15 +192,13 @@ export default function ToolDetail() {
             </motion.button>
             {/* Propriétaire */}
             <div className="flex items-center gap-4 mt-6 bg-cyan-50/60 rounded-xl px-4 py-3 shadow-inner w-fit">
-              <img
-                src={tool.owner.avatar}
-                alt={tool.owner.name}
-                className="w-12 h-12 rounded-full border-2 border-cyan-200 shadow"
-              />
+              <span className="font-semibold text-cyan-900 flex items-center gap-1">
+                <User className="w-4 h-4" />{" "}
+                {tool.owner
+                  ? `${tool.owner.firstName} ${tool.owner.lastName}`
+                  : ""}
+              </span>
               <div>
-                <div className="font-semibold text-cyan-900 flex items-center gap-1">
-                  <User className="w-4 h-4" /> {tool.owner.name}
-                </div>
                 <div className="text-xs text-gray-500">Propriétaire</div>
               </div>
             </div>

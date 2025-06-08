@@ -1,20 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import type { User, RegisterFormValues } from "../interfaces/auth";
 import {
   register as registerUser,
   login as loginUser,
   logout as logoutUser,
 } from "../services/authService";
-
-interface AuthContextType {
-  isAuthenticated: boolean;
-  user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (data: RegisterFormValues) => Promise<boolean>;
-  logout: () => void;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { AuthContext } from "./AuthContext";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -37,14 +28,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const login = async (email: string, password: string) => {
     try {
       const response = await loginUser({ email, password });
+      const userWithToken = { ...response.user, token: response.token };
       localStorage.setItem("token", response.token);
-      setUser(response.user);
+      localStorage.setItem("user", JSON.stringify(userWithToken));
+      setUser(userWithToken);
       setIsAuthenticated(true);
       return true;
     } catch {
       setIsAuthenticated(false);
       setUser(null);
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
       return false;
     }
   };
@@ -72,9 +66,3 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     </AuthContext.Provider>
   );
 };
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used within an AuthProvider");
-  return context;
-}

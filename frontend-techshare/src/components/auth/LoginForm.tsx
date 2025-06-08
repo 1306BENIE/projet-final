@@ -7,7 +7,7 @@ import { Mail, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import type { LoginFormValues } from "@/interfaces/auth";
-import { useAuth } from "@/store/auth";
+import { useAuth } from "@/store/useAuth";
 import { toast } from "react-hot-toast";
 import { AxiosError } from "axios";
 

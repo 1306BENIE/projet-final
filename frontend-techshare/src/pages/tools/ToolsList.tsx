@@ -4,7 +4,7 @@ import ToolsHeader from "@/components/features/tools/ToolsHeader";
 import ToolsFilter from "@/components/features/tools/ToolsFilter";
 import ToolsGrid from "@/components/features/tools/ToolsGrid";
 import PageContainer from "@/components/layout/PageContainer";
-import { mockTools } from "@/pages/tools/mockTools";
+import { toolService } from "@/services/toolService";
 
 export default function ToolsList() {
   const [loading, setLoading] = useState(true);
@@ -15,17 +15,14 @@ export default function ToolsList() {
   const [maxPrice, setMaxPrice] = useState(30000);
   const [status, setStatus] = useState("");
 
-  // Initialisation du localStorage avec les mock au premier chargement
+  // Charger les outils depuis l'API au premier chargement
   useEffect(() => {
-    const stored = localStorage.getItem("tools");
-    if (!stored) {
-      localStorage.setItem("tools", JSON.stringify(mockTools));
-      setTools(mockTools);
-    } else {
-      setTools(JSON.parse(stored));
-    }
-    const timer = setTimeout(() => setLoading(false), 1200);
-    return () => clearTimeout(timer);
+    setLoading(true);
+    toolService
+      .getTools()
+      .then(setTools)
+      .catch(() => setTools([]))
+      .finally(() => setLoading(false));
   }, []);
 
   // Filtrage des outils
@@ -34,10 +31,10 @@ export default function ToolsList() {
       .toLowerCase()
       .includes(search.toLowerCase());
     const matchesLocation = location
-      ? tool.location.toLowerCase().includes(location.toLowerCase())
+      ? tool.address.toLowerCase().includes(location.toLowerCase())
       : true;
     const matchesPrice =
-      tool.priceValue! >= minPrice && tool.priceValue! <= maxPrice;
+      tool.dailyPrice >= minPrice && tool.dailyPrice <= maxPrice;
     const matchesStatus = status ? tool.status === status : true;
     return matchesSearch && matchesLocation && matchesPrice && matchesStatus;
   });

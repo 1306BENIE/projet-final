@@ -10,20 +10,29 @@ export interface AddToolFormData {
   model: string;
   /** Description de l'outil */
   description: string;
-  /** Prix de location par jour */
-  price: number;
-  /** Localisation de l'outil */
-  location: string;
   /** Catégorie de l'outil */
-  category: string;
-  /** Images de l'outil */
-  images: File[];
+  category:
+    | "bricolage"
+    | "jardinage"
+    | "nettoyage"
+    | "cuisine"
+    | "informatique"
+    | "autre";
   /** État de l'outil */
-  etat: string;
+  etat: "neuf" | "bon_etat" | "usage";
+  /** Prix de location par jour */
+  dailyPrice: number;
+  /** Dépôt de garantie (caution), en FCFA */
+  caution: number;
   /** Indique si l'outil est assuré */
   isInsured: boolean;
-  /** Dépôt de garantie (caution), en FCFA */
-  caution?: number;
+  /** Localisation de l'outil */
+  location: {
+    address: string;
+    coordinates: [number, number];
+  };
+  /** Images de l'outil */
+  images: File[];
 }
 
 /**
@@ -34,4 +43,32 @@ export interface AddToolProps {
   onSubmit: (data: FormData) => void;
   /** État de chargement */
   loading?: boolean;
+}
+
+export interface FormDataState {
+  name?: string;
+  brand?: string;
+  modelName?: string;
+  category?: string;
+  etat?: string;
+  description?: string;
+  dailyPrice?: string;
+  caution?: string;
+  location?: string;
+  isInsured?: string;
+  images?: FileList;
+}
+
+export interface ValidationState {
+  name: boolean | null;
+  brand: boolean | null;
+  modelName: boolean | null;
+  category: boolean | null;
+  etat: boolean | null;
+  description: boolean | null;
+  dailyPrice: boolean | null;
+  caution: boolean | null;
+  location: boolean | null;
+  isInsured: boolean | null;
+  images: boolean | null;
 }

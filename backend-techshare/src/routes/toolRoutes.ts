@@ -3,7 +3,7 @@ import { toolController } from "../controllers/toolController";
 import { auth } from "../middleware/auth";
 import { validateObjectId } from "../middleware/validateObjectId";
 import { validatePagination } from "../middleware/validatePagination";
-import { diskUploadMiddleware } from "../middleware/upload";
+import { uploadMiddleware } from "../middleware/upload";
 import { validateTool } from "../middleware/validateTool";
 import { errorHandler } from "../middleware/errorHandler";
 
@@ -247,7 +247,7 @@ router.get(
 router.post(
   "/",
   auth,
-  diskUploadMiddleware.array("images", 5),
+  uploadMiddleware,
   validateTool,
   errorHandler(toolController.createTool)
 );
@@ -326,7 +326,7 @@ router.put(
   "/:toolId",
   auth,
   validateObjectId("toolId"),
-  diskUploadMiddleware.array("images", 5),
+  uploadMiddleware,
   validateTool,
   errorHandler(toolController.updateTool)
 );

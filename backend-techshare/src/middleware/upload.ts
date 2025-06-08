@@ -37,7 +37,7 @@ export const uploadMiddleware = multer({
     }
     cb(null, true);
   },
-}).single("image");
+}).array("images", 5);
 
 // Export cloudinary instance for direct usage
 export { cloudinary };

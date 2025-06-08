@@ -1,4 +1,4 @@
-import { useAuth } from "@/store/auth";
+import { useAuth } from "@/store/useAuth";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 export default function ProtectedRoute() {

@@ -26,24 +26,23 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
       >
         <div className="relative">
           <img
-            src={tool.image}
+            src={
+              tool.images && tool.images.length > 0
+                ? tool.images[0]
+                : "/placeholder.png"
+            }
             alt={tool.name}
             className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
           />
-          {tool.isNew && (
-            <span className="absolute top-3 right-3 bg-cyan-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
-              Nouveau
-            </span>
-          )}
         </div>
         <div className="p-4">
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-lg font-semibold text-gray-900 group-hover:text-cyan-600 transition-colors">
               {tool.name}
             </h3>
-            {tool.rating && (
-              <div className="flex items-center gap-1 text-amber-500">
-                <Star className="w-4 h-4 fill-current" />
+            {typeof tool.rating === "number" && (
+              <div className="flex items-center gap-1 text-yellow-500">
+                <Star className="w-4 h-4 fill-yellow-400" />
                 <span className="text-sm font-medium">
                   {tool.rating.toFixed(1)}
                 </span>
@@ -56,24 +55,19 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
           <div className="mt-3 flex items-center gap-4 text-sm text-gray-500">
             <div className="flex items-center gap-1">
               <MapPin className="w-4 h-4" />
-              {tool.location}
+              {tool.address}
             </div>
             <div className="flex items-center gap-1">
               <DollarSign className="w-4 h-4" />
-              {tool.price}
+              {tool.dailyPrice}
             </div>
           </div>
           <div className="mt-4 flex items-center justify-between">
-            {tool.owner && (
-              <div className="flex items-center gap-2">
-                <img
-                  src={tool.owner.avatar}
-                  alt={tool.owner.name}
-                  className="w-8 h-8 rounded-full"
-                />
-                <span className="text-sm text-gray-600">{tool.owner.name}</span>
-              </div>
-            )}
+            <span className="text-sm text-gray-600">
+              {tool.owner
+                ? `${tool.owner.firstName} ${tool.owner.lastName}`
+                : ""}
+            </span>
             {tool.isInsured && (
               <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
                 Assuré

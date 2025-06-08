@@ -14,47 +14,35 @@ export interface Owner {
  * Interface représentant un outil technologique disponible à la location
  */
 export interface Tool {
-  // Champs obligatoires
-  /** Identifiant unique de l'outil */
-  id: number;
-  /** Nom de l'outil */
+  id: string;
   name: string;
-  /** Marque de l'outil */
   brand: string;
-  /** Modèle de l'outil */
   model: string;
-  /** Description détaillée de l'outil */
   description: string;
-  /** Prix de location formaté (ex: "15,000 FCFA") */
-  price: string;
-  /** Valeur numérique du prix pour les calculs */
-  priceValue: number;
-  /** Localisation de l'outil */
-  location: string;
-  /** Statut de disponibilité ("available" | "unavailable") */
-  status: string;
-  /** URL de l'image principale de l'outil */
-  image: string;
-  /** Liste des URLs des images de l'outil */
-  images: string[];
-  /** État de l'outil */
-  etat: string;
-
-  // Champs optionnels
-  /** Indique si l'outil est nouveau */
-  isNew?: boolean;
-  /** Catégorie de l'outil (ex: "Ordinateur", "Tablette", "Drone") */
-  category?: string;
-  /** Note moyenne sur 5 */
+  category:
+    | "bricolage"
+    | "jardinage"
+    | "nettoyage"
+    | "cuisine"
+    | "informatique"
+    | "autre";
+  etat: "neuf" | "bon_etat" | "usage";
+  dailyPrice: number;
+  caution: number;
+  isInsured: boolean;
+  location: {
+    type: "Point";
+    coordinates: [number, number];
+  };
+  address: string;
   rating?: number;
-  /** Nombre total d'avis */
-  reviewsCount?: number;
-  /** Informations sur le propriétaire */
-  owner?: Owner;
-  /** Nombre de fois que l'outil a été loué */
-  rentalCount?: number;
-  /** Indique si l'outil est assuré */
-  isInsured?: boolean;
-  /** Dépôt de garantie (caution), en FCFA */
-  caution?: number;
+  images: string[];
+  status: "available" | "rented" | "maintenance";
+  owner: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+  createdAt: string;
+  updatedAt: string;
 }

@@ -2,20 +2,24 @@ import Joi from "joi";
 import { Request, Response, NextFunction } from "express";
 import { logger } from "../utils/logger";
 
-const categories = [
-  "laptop",
-  "desktop",
-  "monitor",
-  "printer",
-  "network",
-  "other",
-];
+const categories = ["informatique", "bureautique", "multimedia", "autre"];
+const etats = ["neuf", "bon_etat", "usage"];
 
 export const createToolSchema = Joi.object({
   name: Joi.string().min(3).max(100).required().messages({
     "string.min": "Le nom doit contenir au moins 3 caractères",
     "string.max": "Le nom ne doit pas dépasser 100 caractères",
     "any.required": "Le nom est requis",
+  }),
+  brand: Joi.string().min(2).max(50).required().messages({
+    "string.min": "La marque doit contenir au moins 2 caractères",
+    "string.max": "La marque ne doit pas dépasser 50 caractères",
+    "any.required": "La marque est requise",
+  }),
+  modelName: Joi.string().min(2).max(50).required().messages({
+    "string.min": "Le modèle doit contenir au moins 2 caractères",
+    "string.max": "Le modèle ne doit pas dépasser 50 caractères",
+    "any.required": "Le modèle est requis",
   }),
   description: Joi.string().min(10).max(1000).required().messages({
     "string.min": "La description doit contenir au moins 10 caractères",
@@ -30,18 +34,43 @@ export const createToolSchema = Joi.object({
         "La catégorie doit être l'une des suivantes : " + categories.join(", "),
       "any.required": "La catégorie est requise",
     }),
-  price: Joi.number().min(0).max(10000).required().messages({
-    "number.min": "Le prix doit être supérieur ou égal à 0",
-    "number.max": "Le prix ne doit pas dépasser 10000",
-    "any.required": "Le prix est requis",
+  etat: Joi.string()
+    .valid(...etats)
+    .required()
+    .messages({
+      "any.only": "L'état doit être l'un des suivants : " + etats.join(", "),
+      "any.required": "L'état est requis",
+    }),
+  dailyPrice: Joi.number().min(0).required().messages({
+    "number.min": "Le prix journalier doit être supérieur ou égal à 0",
+    "any.required": "Le prix journalier est requis",
   }),
-  location: Joi.string().min(5).max(200).required().messages({
-    "string.min": "La localisation doit contenir au moins 5 caractères",
-    "string.max": "La localisation ne doit pas dépasser 200 caractères",
-    "any.required": "La localisation est requise",
+  caution: Joi.number().min(0).required().messages({
+    "number.min": "La caution doit être supérieure ou égale à 0",
+    "any.required": "La caution est requise",
   }),
-  availability: Joi.boolean().default(true).messages({
-    "boolean.base": "La disponibilité doit être un booléen",
+  isInsured: Joi.boolean().default(false).messages({
+    "boolean.base": "L'assurance doit être un booléen",
+  }),
+  location: Joi.object({
+    type: Joi.string().valid("Point").required().messages({
+      "any.only": 'Le type de localisation doit être "Point"',
+      "any.required": "Le type de localisation est requis",
+    }),
+    coordinates: Joi.array().items(Joi.number()).length(2).required().messages({
+      "array.length":
+        "Les coordonnées doivent contenir exactement 2 valeurs (longitude, latitude)",
+      "any.required": "Les coordonnées sont requises",
+    }),
+  }).required(),
+  address: Joi.string().min(5).max(200).required().messages({
+    "string.min": "L'adresse doit contenir au moins 5 caractères",
+    "string.max": "L'adresse ne doit pas dépasser 200 caractères",
+    "any.required": "L'adresse est requise",
+  }),
+  images: Joi.array().items(Joi.string()).min(1).required().messages({
+    "array.min": "Au moins une image est requise",
+    "any.required": "Les images sont requises",
   }),
 });
 
@@ -49,6 +78,14 @@ export const updateToolSchema = Joi.object({
   name: Joi.string().min(3).max(100).messages({
     "string.min": "Le nom doit contenir au moins 3 caractères",
     "string.max": "Le nom ne doit pas dépasser 100 caractères",
+  }),
+  brand: Joi.string().min(2).max(50).messages({
+    "string.min": "La marque doit contenir au moins 2 caractères",
+    "string.max": "La marque ne doit pas dépasser 50 caractères",
+  }),
+  modelName: Joi.string().min(2).max(50).messages({
+    "string.min": "Le modèle doit contenir au moins 2 caractères",
+    "string.max": "Le modèle ne doit pas dépasser 50 caractères",
   }),
   description: Joi.string().min(10).max(1000).messages({
     "string.min": "La description doit contenir au moins 10 caractères",
@@ -60,16 +97,37 @@ export const updateToolSchema = Joi.object({
       "any.only":
         "La catégorie doit être l'une des suivantes : " + categories.join(", "),
     }),
-  price: Joi.number().min(0).max(10000).messages({
-    "number.min": "Le prix doit être supérieur ou égal à 0",
-    "number.max": "Le prix ne doit pas dépasser 10000",
+  etat: Joi.string()
+    .valid(...etats)
+    .messages({
+      "any.only": "L'état doit être l'un des suivants : " + etats.join(", "),
+    }),
+  dailyPrice: Joi.number().min(0).messages({
+    "number.min": "Le prix journalier doit être supérieur ou égal à 0",
   }),
-  location: Joi.string().min(5).max(200).messages({
-    "string.min": "La localisation doit contenir au moins 5 caractères",
-    "string.max": "La localisation ne doit pas dépasser 200 caractères",
+  caution: Joi.number().min(0).messages({
+    "number.min": "La caution doit être supérieure ou égale à 0",
   }),
-  availability: Joi.boolean().messages({
-    "boolean.base": "La disponibilité doit être un booléen",
+  isInsured: Joi.boolean().messages({
+    "boolean.base": "L'assurance doit être un booléen",
+  }),
+  location: Joi.object({
+    type: Joi.string().valid("Point").required().messages({
+      "any.only": 'Le type de localisation doit être "Point"',
+      "any.required": "Le type de localisation est requis",
+    }),
+    coordinates: Joi.array().items(Joi.number()).length(2).required().messages({
+      "array.length":
+        "Les coordonnées doivent contenir exactement 2 valeurs (longitude, latitude)",
+      "any.required": "Les coordonnées sont requises",
+    }),
+  }),
+  address: Joi.string().min(5).max(200).messages({
+    "string.min": "L'adresse doit contenir au moins 5 caractères",
+    "string.max": "L'adresse ne doit pas dépasser 200 caractères",
+  }),
+  images: Joi.array().items(Joi.string()).min(1).messages({
+    "array.min": "Au moins une image est requise",
   }),
 });
 

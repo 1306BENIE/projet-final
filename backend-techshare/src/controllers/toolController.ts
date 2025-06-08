@@ -57,7 +57,7 @@ const VALID_CATEGORIES = [
   "jardinage",
   "nettoyage",
   "cuisine",
-  "électronique",
+  "informatique",
   "autre",
 ];
 
@@ -73,10 +73,26 @@ export const toolController = {
         throw new AuthenticationError("Non autorisé");
       }
 
+      // Conversion explicite des champs numériques
+      if (req.body.dailyPrice)
+        req.body.dailyPrice = Number(req.body.dailyPrice);
+      if (req.body.price) req.body.price = Number(req.body.price);
+
       const toolData = {
         ...req.body,
         owner: new Types.ObjectId(req.user.userId),
       } as ToolData;
+
+      // Récupérer les URLs des images uploadées
+      let images: string[] = [];
+      if (req.files && Array.isArray(req.files)) {
+        images = (req.files as any[])
+          .map(
+            (file) => file.path || file.secure_url || file.location || file.url
+          )
+          .filter(Boolean);
+      }
+      toolData.images = images;
 
       // Validation des champs requis
       if (
@@ -359,6 +375,11 @@ export const toolController = {
           "Impossible de modifier un outil en cours de location"
         );
       }
+
+      // Conversion explicite des champs numériques
+      if (req.body.dailyPrice)
+        req.body.dailyPrice = Number(req.body.dailyPrice);
+      if (req.body.price) req.body.price = Number(req.body.price);
 
       const updates = req.body as Partial<ToolData>;
 

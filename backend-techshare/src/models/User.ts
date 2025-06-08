@@ -47,7 +47,7 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
 // Méthode pour générer le token JWT
 userSchema.methods.generateAuthToken = function (): string {
   return jwt.sign(
-    { _id: this._id.toString() },
+    { userId: this._id.toString() },
     process.env.JWT_SECRET as string,
     { expiresIn: "7d" }
   );

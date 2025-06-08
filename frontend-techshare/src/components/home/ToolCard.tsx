@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import type { Tool } from "@/interfaces/tools/tool";
 import { useState } from "react";
-import { useAuth } from "@/store/auth";
+import { useAuth } from "@/store/useAuth";
 import { toast } from "react-hot-toast";
 
 interface ToolCardProps {
@@ -56,7 +56,11 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
               />
             )}
             <img
-              src={tool.image}
+              src={
+                tool.images && tool.images.length > 0
+                  ? tool.images[0]
+                  : "/placeholder.png"
+              }
               alt={tool.name}
               className={`w-full h-full object-cover rounded-2xl shadow-md transition-all duration-300 ${
                 imageLoaded ? "opacity-100 scale-100" : "opacity-0 scale-95"
@@ -100,30 +104,29 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
               {tool.status === "available" ? "Disponible" : "Indisponible"}
             </span>
             <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-primary font-bold text-xs px-3 py-1 rounded-xl shadow-md">
-              {tool.price}/jour
+              {tool.dailyPrice} FCFA/jour
             </span>
           </div>
           <div className="p-6 flex-1 flex flex-col">
             <div className="flex items-center justify-between mb-2 gap-4">
-              <h3 className="font-['Poppins'] font-semibold text-xl text-primary group-hover:text-cyan-700 transition-colors truncate max-w-[60%] ml-1">
-                {tool.name}
-              </h3>
-              {tool.isNew && (
-                <span className="flex-shrink-0 px-3 py-1 rounded-full text-xs font-bold shadow-md bg-gradient-to-r from-cyan-400 to-violet-500 text-white animate-pulse">
-                  Nouveau
-                </span>
-              )}
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <h3 className="font-['Poppins'] font-semibold text-xl text-primary group-hover:text-cyan-700 transition-colors truncate flex-1">
+                  {tool.name}
+                </h3>
+                {tool.createdAt &&
+                  new Date(tool.createdAt).getTime() >
+                    Date.now() - 7 * 24 * 60 * 60 * 1000 && (
+                    <span className="bg-cyan-500 text-white font-bold text-xs px-3 py-1 rounded-full shadow-md flex-shrink-0">
+                      Nouveau
+                    </span>
+                  )}
+              </div>
             </div>
             <div className="flex items-center gap-2 mb-3">
-              {tool.rating && (
+              {typeof tool.rating === "number" && (
                 <span className="flex items-center gap-1 text-yellow-500 font-bold text-sm">
                   <Star className="w-4 h-4 fill-yellow-400" />
                   {tool.rating.toFixed(1)}
-                </span>
-              )}
-              {tool.reviewsCount !== undefined && (
-                <span className="text-xs text-gray-500">
-                  ({tool.reviewsCount} avis)
                 </span>
               )}
               {tool.category && (
@@ -138,7 +141,7 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
             <div className="flex items-center justify-between pt-4 border-t border-gray-100 gap-2">
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <MapPin className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate">{tool.location}</span>
+                <span className="truncate">{tool.address}</span>
               </div>
               <div className="flex items-center gap-2">
                 {tool.isInsured && (
@@ -157,6 +160,13 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
                   <Heart className="w-5 h-5" />
                 </button>
               </div>
+            </div>
+            <div className="mt-2 text-xs text-gray-500">
+              {tool.owner && (
+                <span>
+                  Propriétaire : {tool.owner.firstName} {tool.owner.lastName}
+                </span>
+              )}
             </div>
           </div>
         </div>

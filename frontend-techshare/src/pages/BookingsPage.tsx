@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useBooking } from "@/hooks/useBooking";
-import { useAuth } from "@/store/auth";
+import { useAuth } from "@/store/useAuth";
 import { Booking, BookingStatus, PaymentStatus } from "@/interfaces/Booking";
 import BookingList from "@/components/bookings/BookingList";
 import { BookingDetails } from "@/components/bookings/BookingDetails";
