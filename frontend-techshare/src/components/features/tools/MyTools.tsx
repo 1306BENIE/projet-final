@@ -13,6 +13,7 @@ import {
 import { Tool } from "@/interfaces/tools/tool";
 import { toolService } from "@/services/toolService";
 import { useNavigate } from "react-router-dom";
+import { FaMapMarkerAlt } from "react-icons/fa";
 
 export default function MyTools() {
   const [tools, setTools] = useState<Tool[]>([]);
@@ -206,9 +207,9 @@ export default function MyTools() {
               >
                 <div className="relative h-48 group flex-shrink-0">
                   <img
-                    src={tool.image}
+                    className="w-full h-48 object-cover rounded-t-lg"
+                    src={tool.images[0]}
                     alt={tool.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   {/* Badge de statut et bouton voir détails en bas à gauche */}
@@ -263,9 +264,10 @@ export default function MyTools() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-cyan-600 transition-colors duration-300">
                     {tool.name}
                   </h3>
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-3 flex-grow">
-                    {tool.description}
-                  </p>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <FaMapMarkerAlt className="mr-1" />
+                    {tool.address}
+                  </div>
                   <div className="flex flex-col gap-2 mt-auto">
                     <div className="flex items-center justify-between">
                       <span className="text-cyan-600 font-semibold text-sm">
@@ -273,7 +275,7 @@ export default function MyTools() {
                       </span>
                       <span className="text-sm text-gray-500 flex items-center gap-1">
                         <MapPin className="w-4 h-4" />
-                        {tool.location}
+                        {tool.address}
                       </span>
                     </div>
                   </div>
@@ -328,17 +330,17 @@ export default function MyTools() {
                   {modalDescription.images.map((img: string, idx: number) => (
                     <img
                       key={idx}
+                      className="w-full h-48 object-cover rounded-t-lg"
                       src={img}
                       alt={modalDescription.name}
-                      className="h-36 rounded-xl object-cover shadow"
                     />
                   ))}
                 </div>
               ) : (
                 <img
-                  src={modalDescription.image}
+                  className="w-full h-64 object-cover rounded-t-lg"
+                  src={modalDescription.images[0]}
                   alt={modalDescription.name}
-                  className="rounded-xl mb-2 w-full max-h-48 object-cover shadow mx-auto"
                 />
               )}
               <div className="flex flex-col items-center w-full">
@@ -358,11 +360,6 @@ export default function MyTools() {
                       ? "En location"
                       : "En maintenance"}
                   </span>
-                  {modalDescription.isNew && (
-                    <span className="px-2 py-1 bg-cyan-100 text-cyan-700 rounded-full text-xs font-semibold shadow">
-                      Nouveau
-                    </span>
-                  )}
                 </div>
                 <h2 className="text-xl font-bold mb-1 text-gray-900 text-center">
                   {modalDescription.name}
@@ -397,7 +394,7 @@ export default function MyTools() {
                     Prix : <b>{modalDescription.price}</b>
                   </span>
                   <span className="bg-cyan-50 rounded px-2 py-1">
-                    Localisation : <b>{modalDescription.location}</b>
+                    Localisation : <b>{modalDescription.address}</b>
                   </span>
                   {modalDescription.caution && (
                     <span className="bg-cyan-50 rounded px-2 py-1">
@@ -426,25 +423,21 @@ export default function MyTools() {
                     </span>
                   )}
                 </div>
-                {modalDescription.owner && (
-                  <div className="flex flex-col items-center gap-1 mb-2">
-                    <div className="flex items-center gap-2">
-                      <img
-                        src={modalDescription.owner.avatar}
-                        alt={modalDescription.owner.name}
-                        className="w-8 h-8 rounded-full border border-cyan-200 shadow"
-                      />
-                      <span className="text-gray-700 text-sm font-semibold">
-                        {modalDescription.owner.name}
-                      </span>
-                    </div>
-                    {modalDescription.owner.email && (
-                      <span className="text-gray-500 text-xs mt-1">
-                        {modalDescription.owner.email}
-                      </span>
-                    )}
-                  </div>
-                )}
+                <div className="flex items-center space-x-2">
+                  <img
+                    src={modalDescription.owner.avatar || "/default-avatar.png"}
+                    alt={`${modalDescription.owner.firstName} ${modalDescription.owner.lastName}`}
+                    className="w-8 h-8 rounded-full"
+                  />
+                  <span className="text-sm font-medium">
+                    {modalDescription.owner.firstName}{" "}
+                    {modalDescription.owner.lastName}
+                  </span>
+                </div>
+                <div className="flex items-center text-sm text-gray-600">
+                  <FaMapMarkerAlt className="mr-1" />
+                  {modalDescription.address}
+                </div>
                 <div className="flex flex-col sm:flex-row gap-4 mt-4 w-full items-center">
                   <div className="flex flex-col sm:flex-row gap-4 justify-center w-full">
                     <button

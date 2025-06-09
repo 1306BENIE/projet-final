@@ -208,32 +208,34 @@ exports.toolController = {
         }
     },
     // Obtenir un outil par ID
-    async getToolById(req, res, next) {
+    async getToolById(req, res) {
         try {
-            const { id } = req.params;
-            if (!id || !mongoose_1.Types.ObjectId.isValid(id)) {
-                throw new errors_1.ValidationError("ID d'outil invalide");
-            }
-            const tool = await models_1.Tool.findById(id)
-                .populate("owner", "firstName lastName email phone")
-                .populate({
-                path: "reviews",
-                populate: {
-                    path: "user",
-                    select: "firstName lastName",
-                },
-            });
+            const { toolId } = req.params;
+            console.log("Recherche de l'outil avec l'ID:", toolId);
+            const tool = await models_1.Tool.findById(toolId)
+                .populate("owner", "firstName lastName email")
+                .populate("category", "name")
+                .lean();
             if (!tool) {
-                throw new errors_1.DatabaseError("Outil non trouvé");
+                console.log("Outil non trouvé pour l'ID:", toolId);
+                res.status(404).json({
+                    error: "NotFoundError",
+                    message: "Outil non trouvé",
+                });
+                return;
             }
-            const response = {
+            console.log("Outil trouvé:", tool);
+            res.status(200).json({
                 message: "Outil récupéré avec succès",
                 tool,
-            };
-            res.status(200).json(response);
+            });
         }
         catch (error) {
-            next(error);
+            console.error("Erreur lors de la récupération de l'outil:", error);
+            res.status(500).json({
+                error: "DatabaseError",
+                message: "Erreur lors de la récupération de l'outil",
+            });
         }
     },
     // Mettre à jour un outil

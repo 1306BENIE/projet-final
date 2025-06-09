@@ -20,6 +20,7 @@ interface ApiToolData {
     lastName: string;
     email: string;
     phone: string;
+    avatar: string;
   };
   images: string[];
   status: Tool["status"];
@@ -42,6 +43,7 @@ interface ApiToolData {
   }>;
   createdAt: string;
   updatedAt: string;
+  reviewsCount: number;
 }
 
 // Interface pour la réponse de l'API
@@ -57,72 +59,62 @@ interface ApiToolsResponse {
 }
 
 // Fonction pour transformer les données de l'API
-const transformToolData = (data: ApiToolData): Tool => {
-  console.log("Données reçues de l'API:", data);
-
-  if (!data) {
-    throw new Error("Données d'outil manquantes");
-  }
-
-  if (!data._id) {
-    throw new Error("ID d'outil manquant dans les données");
-  }
-
-  const transformedTool = {
-    id: data._id,
-    name: data.name,
-    brand: data.brand,
-    model: data.modelName,
-    description: data.description,
-    category: data.category,
-    etat: data.etat,
-    dailyPrice: data.dailyPrice,
-    caution: data.caution,
-    isInsured: data.isInsured,
+function transformToolData(apiTool: ApiToolData): Tool {
+  const transformedTool: Tool = {
+    id: apiTool._id,
+    name: apiTool.name,
+    brand: apiTool.brand,
+    model: apiTool.modelName,
+    description: apiTool.description,
+    category: apiTool.category,
+    etat: apiTool.etat,
+    dailyPrice: apiTool.dailyPrice,
+    caution: apiTool.caution,
+    isInsured: apiTool.isInsured,
     owner: {
-      id: data.owner._id,
-      firstName: data.owner.firstName,
-      lastName: data.owner.lastName,
+      id: apiTool.owner._id,
+      firstName: apiTool.owner.firstName,
+      lastName: apiTool.owner.lastName,
+      email: apiTool.owner.email,
+      avatar: apiTool.owner.avatar,
     },
-    images: data.images,
-    status: data.status,
+    images: apiTool.images,
+    status: apiTool.status,
     location: {
-      type: "Point" as const,
+      type: "Point",
       coordinates: [
-        data.location.coordinates[0],
-        data.location.coordinates[1],
+        apiTool.location.coordinates[0],
+        apiTool.location.coordinates[1],
       ] as [number, number],
     },
-    address: data.address,
-    rating: data.rating,
-    createdAt: data.createdAt,
-    updatedAt: data.updatedAt,
+    address: apiTool.address,
+    rating: apiTool.rating || 0,
+    rentalCount: apiTool.rentalCount || 0,
+    createdAt: apiTool.createdAt,
+    updatedAt: apiTool.updatedAt,
   };
 
-  console.log("Outil transformé:", transformedTool);
   return transformedTool;
-};
+}
 
 export const toolService = {
   /**
    * Crée un nouvel outil
    */
-  async createTool(
-    toolData: Omit<Tool, "id" | "createdAt" | "updatedAt">
-  ): Promise<Tool> {
+  async createTool(data: FormData): Promise<Tool> {
     try {
       const response = await api.post<ApiResponse<ApiToolData>>(
         "/tools",
-        toolData
+        data,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
       );
       return transformToolData(response.data.tool);
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(
-          error.response?.data?.message ||
-            "Erreur lors de la création de l'outil"
-        );
-      }
+      console.error("Error creating tool:", error);
       throw error;
     }
   },
@@ -153,37 +145,34 @@ export const toolService = {
    */
   async getToolById(id: string): Promise<Tool> {
     if (!id) {
-      throw new Error("ID de l'outil manquant");
+      throw new Error("ID d'outil manquant");
     }
 
     try {
+      console.log("Fetching tool with ID:", id);
       const response = await api.get<ApiResponse<ApiToolData>>(`/tools/${id}`);
-      console.log("Réponse de l'API:", response.data);
 
-      if (!response.data) {
-        throw new Error("Aucune donnée reçue de l'API");
+      if (!response.data || !response.data.tool) {
+        throw new Error("Données d'outil manquantes dans la réponse");
       }
 
-      // Gérer les deux formats de réponse possibles
-      const toolData = response.data.tool || response.data;
-      return transformToolData(toolData);
+      return transformToolData(response.data.tool);
     } catch (error) {
       console.error("Erreur lors de la récupération de l'outil:", error);
+
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 404) {
           throw new Error("Outil non trouvé");
         }
         if (error.response?.status === 400) {
-          throw new Error(
-            error.response.data.message || "Format d'ID invalide"
-          );
+          throw new Error("Format d'ID invalide");
         }
-        throw new Error(
-          error.response?.data?.message ||
-            "Erreur lors de la récupération de l'outil"
-        );
+        if (error.response?.status === 500) {
+          throw new Error("Erreur serveur lors de la récupération de l'outil");
+        }
       }
-      throw error;
+
+      throw new Error("Erreur lors de la récupération de l'outil");
     }
   },
 
@@ -218,20 +207,20 @@ export const toolService = {
   /**
    * Met à jour un outil
    */
-  async updateTool(id: string, toolData: Partial<Tool>): Promise<Tool> {
+  async updateTool(id: string, data: FormData): Promise<Tool> {
     try {
       const response = await api.put<ApiResponse<ApiToolData>>(
         `/tools/${id}`,
-        toolData
+        data,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
       );
       return transformToolData(response.data.tool);
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(
-          error.response?.data?.message ||
-            "Erreur lors de la mise à jour de l'outil"
-        );
-      }
+      console.error("Error updating tool:", error);
       throw error;
     }
   },

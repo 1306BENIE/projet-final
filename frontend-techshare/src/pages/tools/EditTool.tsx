@@ -3,6 +3,20 @@ import { useState, useEffect } from "react";
 import { toolService } from "@/services/toolService";
 import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
+interface FormData {
+  name: string;
+  brand: string;
+  model: string;
+  description: string;
+  category: string;
+  etat: string;
+  dailyPrice: number;
+  caution: number;
+  isInsured: boolean;
+  address: string;
+  images: string[];
+}
+
 export default function EditTool() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -10,17 +24,18 @@ export default function EditTool() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormData>({
     name: "",
     brand: "",
     model: "",
     description: "",
-    price: "",
-    location: "",
     category: "",
     etat: "",
+    dailyPrice: 0,
+    caution: 0,
     isInsured: false,
-    caution: "",
+    address: "",
+    images: [],
   });
   const [touched, setTouched] = useState<{ [k: string]: boolean }>({});
   const [fieldErrors, setFieldErrors] = useState<{ [k: string]: string }>({});
@@ -31,18 +46,20 @@ export default function EditTool() {
         setLoading(true);
         const t = await toolService.getToolById(id as string);
         if (!t) throw new Error("Outil introuvable");
-        setForm({
+        const initialValues: FormData = {
           name: t.name,
           brand: t.brand,
           model: t.model,
           description: t.description,
-          price: t.price,
-          location: t.location,
-          category: t.category || "",
+          category: t.category,
           etat: t.etat,
-          isInsured: t.isInsured || false,
-          caution: t.caution ? String(t.caution) : "",
-        });
+          dailyPrice: t.dailyPrice,
+          caution: t.caution,
+          isInsured: t.isInsured,
+          address: t.address,
+          images: t.images,
+        };
+        setForm(initialValues);
       } catch (err: unknown) {
         if (err instanceof Error) {
           setError(err.message);

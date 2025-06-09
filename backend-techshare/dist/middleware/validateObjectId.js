@@ -2,13 +2,25 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateObjectId = void 0;
 const mongoose_1 = require("mongoose");
-const errors_1 = require("../utils/errors");
 const validateObjectId = (paramName) => {
-    return (req, _res, next) => {
+    return (req, res, next) => {
         const id = req.params[paramName];
-        if (!mongoose_1.Types.ObjectId.isValid(id)) {
-            throw new errors_1.ValidationError(`ID ${paramName} invalide`);
+        console.log(`Validation de l'ID ${paramName}:`, id);
+        if (!id) {
+            console.error(`ID ${paramName} manquant dans les paramètres`);
+            return res.status(400).json({
+                error: "ValidationError",
+                message: `ID ${paramName} manquant`,
+            });
         }
+        if (!mongoose_1.Types.ObjectId.isValid(id)) {
+            console.error(`Format d'ID ${paramName} invalide:`, id);
+            return res.status(400).json({
+                error: "ValidationError",
+                message: `Format d'ID ${paramName} invalide`,
+            });
+        }
+        console.log(`ID ${paramName} valide:`, id);
         next();
     };
 };

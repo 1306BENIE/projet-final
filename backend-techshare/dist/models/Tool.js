@@ -60,7 +60,14 @@ const toolSchema = new mongoose_1.Schema({
     category: {
         type: String,
         required: [true, "La catégorie est requise"],
-        enum: ["informatique", "bureautique", "multimedia", "autre"],
+        enum: [
+            "bricolage",
+            "jardinage",
+            "nettoyage",
+            "cuisine",
+            "informatique",
+            "autre",
+        ],
     },
     etat: {
         type: String,

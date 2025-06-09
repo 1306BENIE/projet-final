@@ -39,7 +39,7 @@ const createBooking = async (req, res) => {
             startDate,
             endDate,
             totalPrice,
-            depositAmount: tool.deposit || 0,
+            depositAmount: tool.caution || 0,
             message,
         });
         await booking.save();

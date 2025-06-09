@@ -1,43 +1,51 @@
 import type { Tool } from "./tool";
 
-export interface ApiToolResponse {
+export interface ApiToolData {
   _id: string;
   name: string;
   brand: string;
   modelName: string;
   description: string;
-  category:
-    | "bricolage"
-    | "jardinage"
-    | "nettoyage"
-    | "cuisine"
-    | "informatique"
-    | "autre";
-  etat: "neuf" | "bon_etat" | "usage";
+  category: string;
+  etat: string;
   dailyPrice: number;
   caution: number;
-  address: string;
-  images: string[];
-  status: "available" | "rented" | "maintenance";
-  rating?: number;
   isInsured: boolean;
   owner: {
     _id: string;
     firstName: string;
     lastName: string;
+    email?: string;
+    avatar?: string;
   };
+  images: string[];
+  status: "available" | "rented" | "maintenance";
+  location: {
+    type: "Point";
+    coordinates: [number, number];
+  };
+  address: string;
+  rating?: number;
+  rentalCount?: number;
+  reviewsCount?: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface ApiResponse {
-  success: boolean;
+export interface ApiResponse<T> {
   message: string;
-  tools?: ApiToolResponse[];
-  tool?: ApiToolResponse;
+  tool: T;
 }
 
-export const convertApiToolToTool = (apiTool: ApiToolResponse): Tool => {
+export interface ApiToolsResponse {
+  message: string;
+  tools: ApiToolData[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export const convertApiToolToTool = (apiTool: ApiToolData): Tool => {
   if (!apiTool) {
     throw new Error("Données de l'outil manquantes");
   }
@@ -58,20 +66,26 @@ export const convertApiToolToTool = (apiTool: ApiToolResponse): Tool => {
     etat: apiTool.etat,
     dailyPrice: apiTool.dailyPrice,
     caution: apiTool.caution,
-    address: apiTool.address,
-    location: {
-      type: "Point",
-      coordinates: [0, 0], // Valeur par défaut, à ajuster selon vos besoins
-    },
-    images: apiTool.images || [],
-    status: apiTool.status,
-    rating: apiTool.rating,
     isInsured: apiTool.isInsured,
     owner: {
       id: apiTool.owner._id,
       firstName: apiTool.owner.firstName,
       lastName: apiTool.owner.lastName,
+      email: apiTool.owner.email,
+      avatar: apiTool.owner.avatar,
     },
+    images: apiTool.images,
+    status: apiTool.status,
+    location: {
+      type: "Point",
+      coordinates: [
+        apiTool.location.coordinates[0],
+        apiTool.location.coordinates[1],
+      ] as [number, number],
+    },
+    address: apiTool.address,
+    rating: apiTool.rating || 0,
+    rentalCount: apiTool.rentalCount || 0,
     createdAt: apiTool.createdAt,
     updatedAt: apiTool.updatedAt,
   };

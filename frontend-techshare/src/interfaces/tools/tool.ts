@@ -28,9 +28,11 @@ export interface Tool {
     id: string;
     firstName: string;
     lastName: string;
+    email?: string;
+    avatar?: string;
   };
   images: string[];
-  status: "available" | "unavailable";
+  status: "available" | "rented" | "maintenance";
   location: {
     type: "Point";
     coordinates: [number, number];
@@ -40,4 +42,6 @@ export interface Tool {
   rentalCount: number;
   createdAt: string;
   updatedAt: string;
+  price?: number;
+  reviewsCount?: number;
 }

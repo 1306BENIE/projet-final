@@ -12,7 +12,7 @@ export interface ITool extends Document {
     /** Description détaillée */
     description: string;
     /** Catégorie de l'outil */
-    category: "informatique" | "bureautique" | "multimedia" | "autre";
+    category: "bricolage" | "jardinage" | "nettoyage" | "cuisine" | "informatique" | "autre";
     /** État de l'outil */
     etat: "neuf" | "bon_etat" | "usage";
     /** Prix de location journalier */

@@ -37,6 +37,12 @@ const errorHandler = (fn) => {
             });
             // Gestion des erreurs spécifiques
             if (error instanceof errors_1.ValidationError) {
+                console.error("Erreur de validation:", {
+                    message: error.message,
+                    details: error.errors,
+                    path: req.path,
+                    params: req.params,
+                });
                 return res.status(400).json({
                     error: "ValidationError",
                     message: error.message,
@@ -44,19 +50,32 @@ const errorHandler = (fn) => {
                 });
             }
             if (error instanceof errors_1.AuthenticationError) {
+                console.error("Erreur d'authentification:", {
+                    message: error.message,
+                    code: error.code,
+                    path: req.path,
+                });
                 return res.status(error.code || 401).json({
                     error: "AuthenticationError",
                     message: error.message,
                 });
             }
             if (error instanceof errors_1.DatabaseError) {
-                return res.status(500).json({
+                console.error("Erreur de base de données:", {
+                    message: error.message,
+                    path: req.path,
+                });
+                return res.status(404).json({
                     error: "DatabaseError",
-                    message: "Erreur lors de l'accès à la base de données",
-                    details: process.env.NODE_ENV === "development" ? error.message : undefined,
+                    message: error.message,
                 });
             }
             // Erreur par défaut
+            console.error("Erreur serveur inattendue:", {
+                message: error.message,
+                stack: error.stack,
+                path: req.path,
+            });
             return res.status(500).json({
                 error: "InternalServerError",
                 message: "Une erreur inattendue est survenue",

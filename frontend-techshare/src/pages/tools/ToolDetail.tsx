@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tool } from "@/interfaces/tools/tool";
 import { toolService } from "@/services/toolService";
@@ -12,6 +12,7 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { motion } from "framer-motion";
+import { AlertCircle } from "lucide-react";
 
 const ToolDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,31 +21,32 @@ const ToolDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchTool = async () => {
-      console.log("Fetching tool with ID:", id);
+  const fetchTool = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
       if (!id) {
-        setError("ID de l'outil manquant");
-        navigate("/tools");
-        return;
+        throw new Error("ID de l'outil manquant");
       }
 
-      try {
-        const data = await toolService.getToolById(id);
-        console.log("Tool data received:", data);
-        setTool(data);
-      } catch (err) {
-        console.error("Error fetching tool:", err);
-        setError(
-          err instanceof Error ? err.message : "Une erreur est survenue"
-        );
-      } finally {
-        setLoading(false);
+      const data = await toolService.getToolById(id);
+      setTool(data);
+    } catch (err) {
+      console.error("Error fetching tool:", err);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Une erreur est survenue lors du chargement de l'outil");
       }
-    };
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
+  useEffect(() => {
     fetchTool();
-  }, [id, navigate]);
+  }, [fetchTool]);
 
   if (loading) {
     return (
@@ -57,14 +59,17 @@ const ToolDetail: React.FC = () => {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Erreur</h2>
-          <p className="text-gray-600">{error}</p>
+        <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-lg text-center">
+          <div className="text-red-500 mb-4">
+            <AlertCircle className="w-12 h-12 mx-auto" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Erreur</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={() => navigate("/tools")}
-            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition"
           >
-            Retour aux outils
+            Retour à la liste des outils
           </button>
         </div>
       </div>

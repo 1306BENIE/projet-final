@@ -6,7 +6,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateTool = exports.updateToolSchema = exports.createToolSchema = void 0;
 const joi_1 = __importDefault(require("joi"));
 const logger_1 = require("../utils/logger");
-const categories = ["informatique", "bureautique", "multimedia", "autre"];
+const categories = [
+    "bricolage",
+    "jardinage",
+    "nettoyage",
+    "cuisine",
+    "informatique",
+    "autre",
+];
 const etats = ["neuf", "bon_etat", "usage"];
 exports.createToolSchema = joi_1.default.object({
     name: joi_1.default.string().min(3).max(100).required().messages({
