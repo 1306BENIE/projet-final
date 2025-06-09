@@ -19,30 +19,25 @@ export interface Tool {
   brand: string;
   model: string;
   description: string;
-  category:
-    | "bricolage"
-    | "jardinage"
-    | "nettoyage"
-    | "cuisine"
-    | "informatique"
-    | "autre";
-  etat: "neuf" | "bon_etat" | "usage";
+  category: string;
+  etat: string;
   dailyPrice: number;
   caution: number;
   isInsured: boolean;
-  location: {
-    type: "Point";
-    coordinates: [number, number];
-  };
-  address: string;
-  rating?: number;
-  images: string[];
-  status: "available" | "rented" | "maintenance";
   owner: {
     id: string;
     firstName: string;
     lastName: string;
   };
+  images: string[];
+  status: "available" | "unavailable";
+  location: {
+    type: "Point";
+    coordinates: [number, number];
+  };
+  address: string;
+  rating: number;
+  rentalCount: number;
   createdAt: string;
   updatedAt: string;
 }

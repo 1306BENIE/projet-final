@@ -308,38 +308,36 @@ export const toolController = {
   },
 
   // Obtenir un outil par ID
-  async getToolById(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async getToolById(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
-      if (!id || !Types.ObjectId.isValid(id)) {
-        throw new ValidationError("ID d'outil invalide");
-      }
+      const { toolId } = req.params;
+      console.log("Recherche de l'outil avec l'ID:", toolId);
 
-      const tool = await Tool.findById(id)
-        .populate("owner", "firstName lastName email phone")
-        .populate({
-          path: "reviews",
-          populate: {
-            path: "user",
-            select: "firstName lastName",
-          },
-        });
+      const tool = await Tool.findById(toolId)
+        .populate("owner", "firstName lastName email")
+        .populate("category", "name")
+        .lean();
 
       if (!tool) {
-        throw new DatabaseError("Outil non trouvé");
+        console.log("Outil non trouvé pour l'ID:", toolId);
+        res.status(404).json({
+          error: "NotFoundError",
+          message: "Outil non trouvé",
+        });
+        return;
       }
 
-      const response: ToolResponse = {
+      console.log("Outil trouvé:", tool);
+      res.status(200).json({
         message: "Outil récupéré avec succès",
         tool,
-      };
-      res.status(200).json(response);
+      });
     } catch (error) {
-      next(error);
+      console.error("Erreur lors de la récupération de l'outil:", error);
+      res.status(500).json({
+        error: "DatabaseError",
+        message: "Erreur lors de la récupération de l'outil",
+      });
     }
   },
 

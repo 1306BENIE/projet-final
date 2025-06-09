@@ -1,4 +1,4 @@
-import ToolCard from "@/components/home/ToolCard";
+import ToolCard from "@/components/features/tools/ToolCard";
 import SkeletonToolCard from "@/components/home/SkeletonToolCard";
 import type { ToolsGridProps } from "@/interfaces/tools/tools";
 
@@ -8,13 +8,13 @@ export default function ToolsGrid({ loading, tools }: ToolsGridProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 xl:gap-10 box-border">
         {loading ? (
           Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-full">
+            <div key={`skeleton-${i}`} className="h-full">
               <SkeletonToolCard />
             </div>
           ))
         ) : tools.length > 0 ? (
           tools.map((tool, i) => (
-            <div key={tool.id} className="h-full">
+            <div key={tool.id || `tool-${i}`} className="h-full">
               <ToolCard tool={tool} index={i} />
             </div>
           ))

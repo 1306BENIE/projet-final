@@ -5,6 +5,7 @@ import ToolsFilter from "@/components/features/tools/ToolsFilter";
 import ToolsGrid from "@/components/features/tools/ToolsGrid";
 import PageContainer from "@/components/layout/PageContainer";
 import { toolService } from "@/services/toolService";
+import { toast } from "react-hot-toast";
 
 export default function ToolsList() {
   const [loading, setLoading] = useState(true);
@@ -17,12 +18,20 @@ export default function ToolsList() {
 
   // Charger les outils depuis l'API au premier chargement
   useEffect(() => {
-    setLoading(true);
-    toolService
-      .getTools()
-      .then(setTools)
-      .catch(() => setTools([]))
-      .finally(() => setLoading(false));
+    const fetchTools = async () => {
+      try {
+        setLoading(true);
+        const data = await toolService.getTools();
+        setTools(data);
+      } catch (error) {
+        toast.error("Erreur lors du chargement des outils");
+        setTools([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTools();
   }, []);
 
   // Filtrage des outils

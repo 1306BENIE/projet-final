@@ -40,7 +40,7 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
         type: "spring",
         bounce: 0.2,
       }}
-      className="h-full max-w-[400px] mx-auto"
+      className="h-full w-full max-w-none mx-0"
     >
       <Link
         to={`/tools/${tool.id}`}
@@ -49,7 +49,7 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
         aria-label={`Voir les détails de ${tool.name}`}
       >
         <div className="relative bg-white/20 backdrop-blur-xl border-2 border-transparent group-hover:shadow-cyan-200/60 rounded-3xl shadow-xl hover:shadow-2xl overflow-hidden flex flex-col h-full transition-all duration-300 group-hover:scale-[1.04] group-hover:-translate-y-1">
-          <div className="relative h-48 flex items-center justify-center">
+          <div className="relative h-48 w-full flex items-center justify-center overflow-hidden">
             {!imageLoaded && (
               <div
                 className={`absolute inset-0 bg-gray-200 rounded-2xl ${shimmer}`}
@@ -84,7 +84,7 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
                 className="bg-white/95 text-cyan-600 font-semibold px-6 py-2.5 rounded-xl shadow-lg hover:bg-white transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 will-change-transform"
                 onClick={(e) => {
                   e.preventDefault();
-                  window.location.href = `/tools/${tool.id}`;
+                  navigate(`/tools/${tool.id}`);
                 }}
                 aria-label="Voir les détails"
               >
@@ -107,7 +107,7 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
               {tool.dailyPrice} FCFA/jour
             </span>
           </div>
-          <div className="p-6 flex-1 flex flex-col">
+          <div className="p-6 flex-1 flex flex-col min-h-[200px] overflow-hidden">
             <div className="flex items-center justify-between mb-2 gap-4">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <h3 className="font-['Poppins'] font-semibold text-xl text-primary group-hover:text-cyan-700 transition-colors truncate flex-1">
@@ -135,7 +135,7 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
                 </span>
               )}
             </div>
-            <p className="text-gray-700 text-sm mb-4 flex-1 line-clamp-2">
+            <p className="text-gray-700 text-sm mb-4 flex-1 line-clamp-2 min-h-[40px]">
               {tool.description}
             </p>
             <div className="flex items-center justify-between pt-4 border-t border-gray-100 gap-2">
@@ -161,7 +161,7 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
                 </button>
               </div>
             </div>
-            <div className="mt-2 text-xs text-gray-500">
+            <div className="mt-2 text-xs text-gray-500 truncate">
               {tool.owner && (
                 <span>
                   Propriétaire : {tool.owner.firstName} {tool.owner.lastName}

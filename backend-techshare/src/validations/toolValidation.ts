@@ -2,7 +2,14 @@ import Joi from "joi";
 import { Request, Response, NextFunction } from "express";
 import { logger } from "../utils/logger";
 
-const categories = ["informatique", "bureautique", "multimedia", "autre"];
+const categories = [
+  "bricolage",
+  "jardinage",
+  "nettoyage",
+  "cuisine",
+  "informatique",
+  "autre",
+];
 const etats = ["neuf", "bon_etat", "usage"];
 
 export const createToolSchema = Joi.object({

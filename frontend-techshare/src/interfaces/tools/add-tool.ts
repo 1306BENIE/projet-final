@@ -7,7 +7,7 @@ export interface AddToolFormData {
   /** Marque de l'outil */
   brand: string;
   /** Modèle de l'outil */
-  model: string;
+  modelName: string;
   /** Description de l'outil */
   description: string;
   /** Catégorie de l'outil */

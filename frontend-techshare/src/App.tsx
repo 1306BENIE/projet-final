@@ -3,6 +3,7 @@ import { AuthProvider } from "@/store/auth";
 import PublicLayout from "@/components/layout/PublicLayout";
 import PrivateLayout from "@/components/layout/PrivateLayout";
 import AuthLayout from "@/components/layout/AuthLayout";
+import DetailLayout from "@/components/layout/DetailLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RedirectAfterAuth from "@/components/RedirectAfterAuth";
 import Home from "@/pages/home/Home";
@@ -58,8 +59,12 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/home" element={<Home />} />
             <Route path="/tools" element={<ToolList />} />
-            <Route path="/tools/:id" element={<ToolDetail />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
+          </Route>
+
+          {/* Route de détail sans navbar/footer */}
+          <Route element={<DetailLayout />}>
+            <Route path="/tools/:id" element={<ToolDetail />} />
           </Route>
 
           {/* Routes d'authentification */}
