@@ -143,22 +143,24 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
             <p className="text-gray-700 text-sm mb-4 flex-1 line-clamp-2 min-h-[40px]">
               {tool.description}
             </p>
-            <div className="flex items-center justify-between pt-4 border-t border-gray-100 gap-2">
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <MapPin className="w-4 h-4 flex-shrink-0" />
+            <div className="flex items-center justify-between pt-4 border-t border-gray-100 gap-2 min-w-0">
+              <div className="flex items-center gap-2 text-sm text-gray-600 min-w-0 flex-1">
+                <MapPin className="w-4 h-4 flex-shrink-0 text-cyan-600" />
                 <span className="truncate">{tool.address}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {tool.isInsured && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                  <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold whitespace-nowrap">
                     <ShieldCheck className="w-4 h-4" /> Assuré
                   </span>
                 )}
                 <button
                   tabIndex={-1}
-                  className="p-2 rounded-full bg-white/80 hover:bg-cyan-100 text-cyan-500 shadow transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 will-change-transform"
+                  className="p-2 rounded-full bg-white hover:bg-cyan-100 text-cyan-500 shadow transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 will-change-transform flex-shrink-0"
                   onClick={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
+                    toast.success("Fonctionnalité des favoris à venir");
                   }}
                   aria-label="Ajouter aux favoris"
                 >

@@ -128,7 +128,9 @@ export const toolService = {
       if (!response.data || !response.data.tools) {
         throw new Error("Format de réponse invalide");
       }
-      return response.data.tools.map(transformToolData);
+
+      const transformedTools = response.data.tools.map(transformToolData);
+      return transformedTools;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         throw new Error(
