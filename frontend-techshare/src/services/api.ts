@@ -13,12 +13,15 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
+    console.log("Token présent:", !!token);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log("Headers de la requête:", config.headers);
     }
     return config;
   },
   (error) => {
+    console.error("Erreur dans l'intercepteur de requête:", error);
     return Promise.reject(error);
   }
 );
@@ -27,6 +30,7 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    console.error("Erreur API:", error.response?.status, error.response?.data);
     const originalRequest = error.config;
 
     // Si l'erreur est 401 (non autorisé) et que nous n'avons pas déjà essayé de rafraîchir le token

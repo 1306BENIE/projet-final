@@ -104,7 +104,7 @@ const ToolDetail: React.FC = () => {
           className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-shadow duration-300 relative"
         >
           <motion.button
-            onClick={() => navigate("/tools")}
+            onClick={() => navigate("/my-tools")}
             className="absolute top-4 right-4 z-10 bg-white/80 hover:bg-gray-100 text-gray-600 rounded-full p-2 shadow-md hover:shadow-lg transition-all duration-300"
             whileHover={{ scale: 1.1, rotate: 90 }}
             whileTap={{ scale: 0.9 }}

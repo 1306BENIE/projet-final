@@ -182,11 +182,49 @@ export const toolService = {
    * Récupère les outils d'un utilisateur spécifique
    */
   async getUserTools(): Promise<Tool[]> {
-    const response = await api.get("/tools/user");
-    if (!response.data || !response.data.tools) {
-      throw new Error("Format de réponse invalide");
+    try {
+      console.log("Fetching user tools...");
+      const response = await api.get<ApiToolsResponse>("/tools/user/tools");
+      console.log("Response received:", response.data);
+
+      if (!response.data || !response.data.tools) {
+        console.error("Invalid response format:", response.data);
+        throw new Error("Format de réponse invalide");
+      }
+
+      const transformedTools = response.data.tools.map(transformToolData);
+      console.log("Transformed tools:", transformedTools);
+      return transformedTools;
+    } catch (error) {
+      console.error(
+        "Erreur lors de la récupération des outils de l'utilisateur:",
+        error
+      );
+
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const message = error.response?.data?.message;
+
+        console.error("Error details:", { status, message });
+
+        if (status === 401) {
+          throw new Error("Vous devez être connecté pour voir vos outils");
+        }
+        if (status === 400) {
+          throw new Error(message || "Format de requête invalide");
+        }
+        if (status === 500) {
+          throw new Error(
+            "Erreur serveur lors de la récupération de vos outils"
+          );
+        }
+
+        throw new Error(
+          message || "Erreur lors de la récupération de vos outils"
+        );
+      }
+      throw error;
     }
-    return response.data.tools.map(transformToolData);
   },
 
   /**
@@ -211,6 +249,11 @@ export const toolService = {
    */
   async updateTool(id: string, data: FormData): Promise<Tool> {
     try {
+      console.log("Mise à jour de l'outil avec l'ID:", id);
+      console.log("Type de l'ID dans le service:", typeof id);
+      console.log("Longueur de l'ID dans le service:", id.length);
+      console.log("Données envoyées:", Object.fromEntries(data.entries()));
+
       const response = await api.put<ApiResponse<ApiToolData>>(
         `/tools/${id}`,
         data,

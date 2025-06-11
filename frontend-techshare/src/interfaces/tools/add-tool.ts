@@ -1,6 +1,12 @@
 /**
  * Interface pour les données du formulaire d'ajout d'outil
  */
+export interface Location {
+  type: "Point";
+  address: string;
+  coordinates: [number, number];
+}
+
 export interface AddToolFormData {
   /** Nom de l'outil */
   name: string;
@@ -27,12 +33,9 @@ export interface AddToolFormData {
   /** Indique si l'outil est assuré */
   isInsured: boolean;
   /** Localisation de l'outil */
-  location: {
-    address: string;
-    coordinates: [number, number];
-  };
-  /** Images de l'outil */
-  images: File[];
+  location: Location;
+  /** Images de l'outil (peut être soit des File pour l'upload, soit des string pour les URLs existantes) */
+  images: (File | string)[];
 }
 
 /**

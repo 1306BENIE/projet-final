@@ -352,12 +352,12 @@ export const toolController = {
         throw new AuthenticationError("Non autorisé");
       }
 
-      const { id } = req.params;
-      if (!id || !Types.ObjectId.isValid(id)) {
+      const { toolId } = req.params;
+      if (!toolId || !Types.ObjectId.isValid(toolId)) {
         throw new ValidationError("ID d'outil invalide");
       }
 
-      const tool = await Tool.findById(id);
+      const tool = await Tool.findById(toolId);
       if (!tool) {
         throw new DatabaseError("Outil non trouvé");
       }
@@ -446,7 +446,7 @@ export const toolController = {
       }
 
       const updatedTool = await Tool.findByIdAndUpdate(
-        id,
+        toolId,
         { $set: updates },
         { new: true }
       ).populate("owner", "firstName lastName email");
@@ -483,12 +483,12 @@ export const toolController = {
         throw new AuthenticationError("Non autorisé");
       }
 
-      const { id } = req.params;
-      if (!id || !Types.ObjectId.isValid(id)) {
+      const { toolId } = req.params;
+      if (!toolId || !Types.ObjectId.isValid(toolId)) {
         throw new ValidationError("ID d'outil invalide");
       }
 
-      const tool = await Tool.findById(id);
+      const tool = await Tool.findById(toolId);
       if (!tool) {
         throw new DatabaseError("Outil non trouvé");
       }
@@ -505,7 +505,7 @@ export const toolController = {
         );
       }
 
-      await Tool.deleteOne({ _id: id });
+      await Tool.deleteOne({ _id: toolId });
 
       // Journalisation de l'événement
       await securityLogService.logEvent(

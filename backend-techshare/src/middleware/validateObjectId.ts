@@ -6,6 +6,9 @@ export const validateObjectId = (paramName: string) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const id = req.params[paramName];
     console.log(`Validation de l'ID ${paramName}:`, id);
+    console.log("Type de l'ID:", typeof id);
+    console.log("Longueur de l'ID:", id?.length);
+    console.log("Est-ce un ObjectId valide:", Types.ObjectId.isValid(id));
 
     if (!id) {
       console.error(`ID ${paramName} manquant dans les paramètres`);

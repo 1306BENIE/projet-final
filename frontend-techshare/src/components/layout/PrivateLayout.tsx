@@ -5,10 +5,11 @@ import Footer from "@/components/layout/Footer";
 export default function PrivateLayout() {
   const location = useLocation();
 
-  // Masquer la navbar sur /tools/add et /tools/edit et leurs sous-routes
+  // Masquer la navbar et le footer sur /tools/add, /tools/:id/edit et leurs sous-routes
   const hideHeader =
     location.pathname.startsWith("/tools/add") ||
-    location.pathname.startsWith("/tools/edit");
+    (location.pathname.includes("/tools/") &&
+      location.pathname.includes("/edit"));
 
   return (
     <div className="min-h-screen flex flex-col bg-light">
@@ -16,7 +17,7 @@ export default function PrivateLayout() {
       <main className="flex-1">
         <Outlet />
       </main>
-      <Footer />
+      {!hideHeader && <Footer />}
     </div>
   );
 }
