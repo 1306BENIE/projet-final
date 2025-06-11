@@ -6,6 +6,9 @@ const validateObjectId = (paramName) => {
     return (req, res, next) => {
         const id = req.params[paramName];
         console.log(`Validation de l'ID ${paramName}:`, id);
+        console.log("Type de l'ID:", typeof id);
+        console.log("Longueur de l'ID:", id?.length);
+        console.log("Est-ce un ObjectId valide:", mongoose_1.Types.ObjectId.isValid(id));
         if (!id) {
             console.error(`ID ${paramName} manquant dans les paramètres`);
             return res.status(400).json({

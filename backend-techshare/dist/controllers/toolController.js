@@ -244,11 +244,11 @@ exports.toolController = {
             if (!req.user?.userId) {
                 throw new errors_1.AuthenticationError("Non autorisé");
             }
-            const { id } = req.params;
-            if (!id || !mongoose_1.Types.ObjectId.isValid(id)) {
+            const { toolId } = req.params;
+            if (!toolId || !mongoose_1.Types.ObjectId.isValid(toolId)) {
                 throw new errors_1.ValidationError("ID d'outil invalide");
             }
-            const tool = await models_1.Tool.findById(id);
+            const tool = await models_1.Tool.findById(toolId);
             if (!tool) {
                 throw new errors_1.DatabaseError("Outil non trouvé");
             }
@@ -309,7 +309,7 @@ exports.toolController = {
                     throw new errors_1.ValidationError("Coordonnées géographiques invalides");
                 }
             }
-            const updatedTool = await models_1.Tool.findByIdAndUpdate(id, { $set: updates }, { new: true }).populate("owner", "firstName lastName email");
+            const updatedTool = await models_1.Tool.findByIdAndUpdate(toolId, { $set: updates }, { new: true }).populate("owner", "firstName lastName email");
             if (!updatedTool) {
                 throw new errors_1.DatabaseError("Erreur lors de la mise à jour de l'outil");
             }
@@ -331,11 +331,11 @@ exports.toolController = {
             if (!req.user?.userId) {
                 throw new errors_1.AuthenticationError("Non autorisé");
             }
-            const { id } = req.params;
-            if (!id || !mongoose_1.Types.ObjectId.isValid(id)) {
+            const { toolId } = req.params;
+            if (!toolId || !mongoose_1.Types.ObjectId.isValid(toolId)) {
                 throw new errors_1.ValidationError("ID d'outil invalide");
             }
-            const tool = await models_1.Tool.findById(id);
+            const tool = await models_1.Tool.findById(toolId);
             if (!tool) {
                 throw new errors_1.DatabaseError("Outil non trouvé");
             }
@@ -347,7 +347,7 @@ exports.toolController = {
             if (tool.status === "rented") {
                 throw new errors_1.ValidationError("Impossible de supprimer un outil en cours de location");
             }
-            await models_1.Tool.deleteOne({ _id: id });
+            await models_1.Tool.deleteOne({ _id: toolId });
             // Journalisation de l'événement
             await securityLogService_1.securityLogService.logEvent(new mongoose_1.Types.ObjectId(req.user.userId), "tool_deleted", "Outil supprimé");
             const response = {

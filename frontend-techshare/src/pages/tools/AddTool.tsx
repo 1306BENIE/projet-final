@@ -37,6 +37,7 @@ export default function AddTool() {
     caution: 0,
     isInsured: false,
     location: {
+      type: "Point",
       address: "",
       coordinates: [0, 0],
     },
