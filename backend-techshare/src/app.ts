@@ -19,6 +19,7 @@ import categoryRoutes from "./routes/categoryRoutes";
 import paymentRoutes from "./routes/paymentRoutes";
 import statsRoutes from "./routes/statsRoutes";
 import reportRoutes from "./routes/reportRoutes";
+import bookingRoutes from "./routes/bookingRoutes";
 import testRoutes from "./routes/testRoutes";
 
 const app = express();
@@ -65,6 +66,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/bookings", bookingRoutes);
 app.use("/api/test", testRoutes);
 
 // Gestion des erreurs 404

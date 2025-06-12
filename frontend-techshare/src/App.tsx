@@ -17,12 +17,13 @@ import Dashboard from "@/pages/dashboard/Dashboard";
 import Profile from "@/pages/profile/Profile";
 import AddTool from "@/pages/tools/AddTool";
 import EditTool from "@/pages/tools/EditTool";
-import BookingsPage from "@/pages/BookingsPage";
+import BookingsPage from "@/pages/bookings/BookingsPage";
 import MyListings from "@/pages/listing/MyListings";
 import BookingDetail from "@/pages/bookings/BookingDetail";
 import BookTool from "@/pages/tools/BookTool";
 import { TestPage } from "@/pages/TestPage";
 import { Toaster } from "react-hot-toast";
+import ReceivedBookings from "@/pages/bookings/ReceivedBookings";
 
 export default function App() {
   return (
@@ -85,6 +86,8 @@ export default function App() {
               <Route path="/bookings" element={<BookingsPage />} />
               <Route path="/bookings/:id" element={<BookingDetail />} />
               <Route path="/my-listings" element={<MyListings />} />
+              <Route path="/my-bookings" element={<BookingsPage />} />
+              <Route path="/received-bookings" element={<ReceivedBookings />} />
             </Route>
           </Route>
 

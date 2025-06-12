@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Menu, LogOut, User, Wrench, Calendar } from "lucide-react";
+import { Menu, LogOut, User, Wrench, Calendar, Inbox } from "lucide-react";
 import { useAuth } from "@/store/useAuth";
 
 export default function Navbar() {
@@ -115,6 +115,13 @@ export default function Navbar() {
                     <Calendar className="w-4 h-4" />
                     Mes Réservations
                   </Link>
+                  <Link
+                    to="/received-bookings"
+                    className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                  >
+                    <Inbox className="w-4 h-4" />
+                    Réservations reçues
+                  </Link>
                   <button
                     onClick={handleLogout}
                     className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 w-full text-left transition-colors"
@@ -196,6 +203,13 @@ export default function Navbar() {
                   onClick={() => setMenuOpen(false)}
                 >
                   Mes Réservations
+                </Link>
+                <Link
+                  to="/received-bookings"
+                  className="text-primary font-semibold hover:text-accent"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Réservations reçues
                 </Link>
                 <button
                   onClick={() => {

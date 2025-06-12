@@ -187,10 +187,10 @@ export const toolService = {
       const response = await api.get<ApiToolsResponse>("/tools/user/tools");
       console.log("Response received:", response.data);
 
-      if (!response.data || !response.data.tools) {
+    if (!response.data || !response.data.tools) {
         console.error("Invalid response format:", response.data);
-        throw new Error("Format de réponse invalide");
-      }
+      throw new Error("Format de réponse invalide");
+    }
 
       const transformedTools = response.data.tools.map(transformToolData);
       console.log("Transformed tools:", transformedTools);

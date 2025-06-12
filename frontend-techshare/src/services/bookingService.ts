@@ -1,9 +1,6 @@
-import { Booking, BookingInput } from "@/types/booking";
+import { Booking } from "@/interfaces/booking/booking.interface";
+import { CreateBookingDto } from "@/interfaces/booking/dto.interface";
 import api from "./api";
-
-interface CreateBookingDto extends BookingInput {
-  userId: string;
-}
 
 interface UpdateBookingDto {
   status?: string;

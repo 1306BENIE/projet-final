@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { Booking, BookingStatus, PaymentStatus } from "@/interfaces/Booking";
+import {
+  Booking,
+  BookingStatus,
+  PaymentStatus,
+} from "@/interfaces/booking/booking.interface";
 import { useBooking } from "@/hooks/useBooking";
 import { format, isBefore, startOfDay, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -22,8 +26,12 @@ export function BookingDetails({
 }: BookingDetailsProps) {
   const { updateBooking, cancelBooking } = useBooking();
   const [isEditingDates, setIsEditingDates] = useState(false);
-  const [startDate, setStartDate] = useState(booking.startDate);
-  const [endDate, setEndDate] = useState(booking.endDate);
+  const [startDate, setStartDate] = useState(
+    new Date(booking.startDate).toISOString()
+  );
+  const [endDate, setEndDate] = useState(
+    new Date(booking.endDate).toISOString()
+  );
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notes, setNotes] = useState(booking.notes || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -174,15 +182,15 @@ export function BookingDetails({
               {isEditingDates ? (
                 <Input
                   type="date"
-                  value={format(startDate, "yyyy-MM-dd")}
+                  value={format(new Date(startDate), "yyyy-MM-dd")}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setStartDate(new Date(e.target.value))
+                    setStartDate(e.target.value)
                   }
                   disabled={isSubmitting}
                 />
               ) : (
                 <p className="font-medium">
-                  {format(booking.startDate, "PPP", { locale: fr })}
+                  {format(new Date(startDate), "PPP", { locale: fr })}
                 </p>
               )}
             </div>
@@ -195,15 +203,15 @@ export function BookingDetails({
               {isEditingDates ? (
                 <Input
                   type="date"
-                  value={format(endDate, "yyyy-MM-dd")}
+                  value={format(new Date(endDate), "yyyy-MM-dd")}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setEndDate(new Date(e.target.value))
+                    setEndDate(e.target.value)
                   }
                   disabled={isSubmitting}
                 />
               ) : (
                 <p className="font-medium">
-                  {format(booking.endDate, "PPP", { locale: fr })}
+                  {format(new Date(endDate), "PPP", { locale: fr })}
                 </p>
               )}
             </div>

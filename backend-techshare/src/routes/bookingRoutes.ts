@@ -4,6 +4,7 @@ import { validateObjectId } from "../middleware/validateObjectId";
 import { validatePagination } from "../middleware/validatePagination";
 import { validateBooking } from "../middleware/validateBooking";
 import * as bookingController from "../controllers/bookingController";
+import { Booking } from "../models/Booking";
 
 const router = express.Router();
 
@@ -259,5 +260,17 @@ router.post(
  *         description: Booking not found
  */
 router.put("/:id", auth, validateObjectId, bookingController.updateBooking);
+
+router.get("/", auth, async (req, res) => {
+  try {
+    const bookings = await Booking.find();
+    res.json(bookings);
+  } catch (error) {
+    res.status(500).json({
+      message: "Erreur lors de la récupération des réservations",
+      error,
+    });
+  }
+});
 
 export default router;
