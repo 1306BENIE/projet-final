@@ -1,9 +1,9 @@
 import { useState } from "react";
+import { Booking } from "@/interfaces/booking/booking.interface";
 import {
-  Booking,
   CreateBookingDto,
   UpdateBookingDto,
-} from "@/interfaces/Booking";
+} from "@/interfaces/booking/dto.interface";
 import { bookingService } from "@/services/bookingService";
 
 export function useBooking() {

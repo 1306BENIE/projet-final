@@ -1,4 +1,8 @@
-import { Booking, BookingStatus, PaymentStatus } from "@/interfaces/Booking";
+import {
+  Booking,
+  BookingStatus,
+  PaymentStatus,
+} from "@/interfaces/booking/booking.interface";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Calendar, Clock, Banknote, Wrench } from "lucide-react";

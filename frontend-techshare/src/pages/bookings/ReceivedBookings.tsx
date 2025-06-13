@@ -61,10 +61,8 @@ export default function ReceivedBookings() {
     async function fetchReceivedBookings() {
       setLoading(true);
       try {
-        const userId = JSON.parse(localStorage.getItem("user") || "{}").id;
-        const rawBookings: Booking[] = await bookingService.getReceivedBookings(
-          userId
-        );
+        const rawBookings: Booking[] =
+          await bookingService.getReceivedBookings();
         const enriched: ReceivedBooking[] = await Promise.all(
           rawBookings.map(async (booking) => {
             const tool: Tool = await toolService.getToolById(booking.toolId);

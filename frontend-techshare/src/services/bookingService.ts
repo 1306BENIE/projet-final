@@ -28,9 +28,9 @@ class BookingService {
     return response.data;
   }
 
-  async getReceivedBookings(userId: string): Promise<Booking[]> {
-    const response = await api.get<Booking[]>(`/bookings/received/${userId}`);
-    return response.data;
+  async getReceivedBookings(): Promise<Booking[]> {
+    const response = await api.get<{ bookings: Booking[] }>("/bookings/owner");
+    return response.data.bookings;
   }
 
   async updateBooking(id: string, data: UpdateBookingDto): Promise<Booking> {

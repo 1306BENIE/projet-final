@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
-import { Booking, BookingStatus, PaymentStatus } from "@/interfaces/Booking";
+import {
+  Booking,
+  BookingStatus,
+  PaymentStatus,
+} from "@/interfaces/booking/booking.interface";
 import { bookingService } from "@/services/bookingService";
 import { Button } from "@/components/ui/Button/Button";
 import { format } from "date-fns";
@@ -16,8 +20,8 @@ export const ReceivedBookings = ({ userId }: ReceivedBookingsProps) => {
 
   const loadBookings = async () => {
     try {
-      const receivedBookings = await bookingService.getReceivedBookings(userId);
-      setBookings(receivedBookings);
+      const rawBookings: Booking[] = await bookingService.getReceivedBookings();
+      setBookings(rawBookings);
     } catch (error) {
       console.error("Erreur lors du chargement des réservations:", error);
       toast.error("Erreur lors du chargement des réservations");
