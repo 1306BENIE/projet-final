@@ -42,6 +42,7 @@ const validateObjectId_1 = require("../middleware/validateObjectId");
 const validatePagination_1 = require("../middleware/validatePagination");
 const validateBooking_1 = require("../middleware/validateBooking");
 const bookingController = __importStar(require("../controllers/bookingController"));
+const Booking_1 = require("../models/Booking");
 const router = express_1.default.Router();
 /**
  * @swagger
@@ -274,5 +275,17 @@ router.post("/:id/cancel", auth_middleware_1.auth, validateObjectId_1.validateOb
  *         description: Booking not found
  */
 router.put("/:id", auth_middleware_1.auth, validateObjectId_1.validateObjectId, bookingController.updateBooking);
+router.get("/", auth_middleware_1.auth, async (req, res) => {
+    try {
+        const bookings = await Booking_1.Booking.find();
+        res.json(bookings);
+    }
+    catch (error) {
+        res.status(500).json({
+            message: "Erreur lors de la récupération des réservations",
+            error,
+        });
+    }
+});
 exports.default = router;
 //# sourceMappingURL=bookingRoutes.js.map

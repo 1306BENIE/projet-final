@@ -5,6 +5,7 @@ import type { Tool } from "@/interfaces/tools/tool";
 import { useState } from "react";
 import { useAuth } from "@/store/useAuth";
 import { toast } from "react-hot-toast";
+import { BookingModal } from "@/components/booking/BookingModal";
 
 interface ToolCardProps {
   tool: Tool;
@@ -17,6 +18,7 @@ const shimmer =
 export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -27,7 +29,7 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
       navigate("/login");
       return;
     }
-    navigate(`/tools/${tool.id}/book`);
+    setIsBookingModalOpen(true);
   };
 
   return (
@@ -173,6 +175,14 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
           </div>
         </div>
       </Link>
+
+      {isBookingModalOpen && (
+        <BookingModal
+          isOpen={isBookingModalOpen}
+          onClose={() => setIsBookingModalOpen(false)}
+          tool={tool}
+        />
+      )}
     </motion.div>
   );
 }

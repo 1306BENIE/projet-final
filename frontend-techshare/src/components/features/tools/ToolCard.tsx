@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Tool } from "@/interfaces/tools/tool";
 import { useAuth } from "@/store/useAuth";
 import { toast } from "react-hot-toast";
+import { BookingModal } from "@/components/booking/BookingModal";
 
 const shimmer =
   "before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent";
@@ -33,6 +34,7 @@ export default function ToolCard({
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -43,7 +45,7 @@ export default function ToolCard({
       navigate("/login");
       return;
     }
-    navigate(`/tools/${tool.id}/book`);
+    setIsBookingModalOpen(true);
   };
 
   const handleDelete = async () => {
@@ -313,6 +315,14 @@ export default function ToolCard({
           </div>
         )}
       </AnimatePresence>
+
+      {isBookingModalOpen && (
+        <BookingModal
+          isOpen={isBookingModalOpen}
+          onClose={() => setIsBookingModalOpen(false)}
+          tool={tool}
+        />
+      )}
     </>
   );
 }

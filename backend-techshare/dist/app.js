@@ -23,6 +23,7 @@ const categoryRoutes_1 = __importDefault(require("./routes/categoryRoutes"));
 const paymentRoutes_1 = __importDefault(require("./routes/paymentRoutes"));
 const statsRoutes_1 = __importDefault(require("./routes/statsRoutes"));
 const reportRoutes_1 = __importDefault(require("./routes/reportRoutes"));
+const bookingRoutes_1 = __importDefault(require("./routes/bookingRoutes"));
 const testRoutes_1 = __importDefault(require("./routes/testRoutes"));
 const app = (0, express_1.default)();
 // Initialisation des services
@@ -59,6 +60,7 @@ app.use("/api/categories", categoryRoutes_1.default);
 app.use("/api/payments", paymentRoutes_1.default);
 app.use("/api/stats", statsRoutes_1.default);
 app.use("/api/reports", reportRoutes_1.default);
+app.use("/api/bookings", bookingRoutes_1.default);
 app.use("/api/test", testRoutes_1.default);
 // Gestion des erreurs 404
 app.use((req, res) => {

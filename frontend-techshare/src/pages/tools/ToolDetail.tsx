@@ -13,6 +13,7 @@ import {
 } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { AlertCircle } from "lucide-react";
+import { BookingModal } from "@/components/booking/BookingModal";
 
 const ToolDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +21,7 @@ const ToolDetail: React.FC = () => {
   const [tool, setTool] = useState<Tool | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
   const fetchTool = useCallback(async () => {
     try {
@@ -246,7 +248,7 @@ const ToolDetail: React.FC = () => {
                       <motion.button
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.97 }}
-                        onClick={() => navigate(`/tools/${tool.id}/book`)}
+                        onClick={() => setIsBookingModalOpen(true)}
                         className="w-48 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-lg 
                                  hover:from-indigo-700 hover:to-blue-600 transition-all duration-300 
                                  font-semibold text-sm tracking-wide shadow-lg hover:shadow-xl
@@ -269,6 +271,14 @@ const ToolDetail: React.FC = () => {
           </div>
         </motion.div>
       </div>
+
+      {tool && (
+        <BookingModal
+          isOpen={isBookingModalOpen}
+          onClose={() => setIsBookingModalOpen(false)}
+          tool={tool}
+        />
+      )}
     </div>
   );
 };
