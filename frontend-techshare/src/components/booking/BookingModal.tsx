@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { AxiosError } from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, differenceInDays } from "date-fns";
-import { X, Clock, Calendar } from "lucide-react";
+import { X, Clock, Calendar, AlertCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { Input } from "@/components/ui/Input";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { Button } from "@/components/ui/Button";
 import { Tool } from "@/interfaces/tools/tool";
 import { CreateBookingDto } from "@/interfaces/booking/dto.interface";
 import { bookingService } from "@/services/bookingService";
-import { ContractModal } from "./ContractModal";
-import { AxiosError } from "axios";
+import { ContractModal } from "@/components/booking/ContractModal";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -25,7 +26,34 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const [showContract, setShowContract] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bookedPeriods, setBookedPeriods] = useState<
+    { startDate: string; endDate: string }[]
+  >([]);
   const navigate = useNavigate();
+  const [dateError, setDateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen && tool.id) {
+      bookingService
+        .getBookedDates(tool.id)
+        .then(setBookedPeriods)
+        .catch(() => setBookedPeriods([]));
+    } else {
+      setBookedPeriods([]);
+    }
+  }, [isOpen, tool.id]);
+
+  useEffect(() => {
+    if (startDate && endDate) {
+      if (endDate <= startDate) {
+        setDateError("La date de fin doit être après la date de début.");
+      } else {
+        setDateError(null);
+      }
+    } else {
+      setDateError(null);
+    }
+  }, [startDate, endDate]);
 
   if (!isOpen) return null;
 
@@ -73,6 +101,22 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
         throw new Error("La durée maximale de réservation est de 30 jours");
       }
 
+      // Vérifier le chevauchement avec les périodes réservées
+      const isOverlapping = bookedPeriods.some(
+        (period) =>
+          startDate &&
+          endDate &&
+          new Date(startDate) <= new Date(period.endDate) &&
+          new Date(endDate) >= new Date(period.startDate)
+      );
+      if (isOverlapping) {
+        setError(
+          "L'outil est déjà réservé sur cette période. Veuillez choisir d'autres dates."
+        );
+        setIsLoading(false);
+        return;
+      }
+
       const bookingData: CreateBookingDto = {
         toolId: tool.id,
         startDate: start.toISOString(),
@@ -84,7 +128,7 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
 
       toast.success("Réservation créée avec succès !");
       onClose();
-      navigate("/mes-reservations");
+      navigate("/my-bookings");
     } catch (error) {
       console.error("Booking error:", error);
       if (error instanceof AxiosError) {
@@ -106,6 +150,12 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
     }
   };
 
+  // Prépare les intervalles à désactiver pour le DatePicker
+  const excludeIntervals = bookedPeriods.map((period) => ({
+    start: new Date(period.startDate),
+    end: new Date(period.endDate),
+  }));
+
   return (
     <AnimatePresence>
       <motion.div
@@ -119,7 +169,7 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ type: "spring", duration: 0.5 }}
-          className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden"
+          className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto overflow-hidden"
         >
           {/* En-tête */}
           <div className="relative p-6 border-b border-gray-100">
@@ -155,6 +205,26 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
             </p>
           </div>
 
+          {/* Bloc d'alerte périodes réservées - design pro */}
+          {bookedPeriods.length > 0 && (
+            <div className="mb-6 flex items-start gap-3 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-xl shadow-sm">
+              <AlertCircle className="w-6 h-6 text-yellow-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <div className="font-semibold text-yellow-900 mb-1">
+                  Périodes déjà réservées :
+                </div>
+                <ul className="list-disc ml-5 text-yellow-900 text-sm space-y-1">
+                  {bookedPeriods.map((period, idx) => (
+                    <li key={idx}>
+                      {format(new Date(period.startDate), "dd/MM/yyyy")} au{" "}
+                      {format(new Date(period.endDate), "dd/MM/yyyy")}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
           {/* Formulaire */}
           <form onSubmit={handleSubmit} className="p-6">
             <div className="space-y-6">
@@ -169,38 +239,35 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
                     </h3>
                   </div>
                   <div className="space-y-3">
-                    <div>
-                      <Input
-                        type="date"
-                        value={startDate ? format(startDate, "yyyy-MM-dd") : ""}
-                        onChange={(e) =>
-                          setStartDate(
-                            e.target.value ? new Date(e.target.value) : null
-                          )
-                        }
-                        min={format(new Date(), "yyyy-MM-dd")}
-                        required
-                        className="w-full border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    <div className="bg-gray-50 rounded-md p-2">
+                      <DatePicker
+                        selected={startDate}
+                        onChange={(date: Date | null) => setStartDate(date)}
+                        minDate={new Date()}
+                        excludeDateIntervals={excludeIntervals}
+                        dateFormat="dd/MM/yyyy"
+                        placeholderText="Date de début"
+                        className="w-full border-gray-200 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 bg-gray-50"
+                        locale="fr"
                       />
                     </div>
-                    <div>
-                      <Input
-                        type="date"
-                        value={endDate ? format(endDate, "yyyy-MM-dd") : ""}
-                        onChange={(e) =>
-                          setEndDate(
-                            e.target.value ? new Date(e.target.value) : null
-                          )
-                        }
-                        min={
-                          startDate
-                            ? format(startDate, "yyyy-MM-dd")
-                            : format(new Date(), "yyyy-MM-dd")
-                        }
-                        required
-                        className="w-full border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    <div className="bg-gray-50 rounded-md p-2">
+                      <DatePicker
+                        selected={endDate}
+                        onChange={(date: Date | null) => setEndDate(date)}
+                        minDate={startDate || new Date()}
+                        excludeDateIntervals={excludeIntervals}
+                        dateFormat="dd/MM/yyyy"
+                        placeholderText="Date de fin"
+                        className="w-full border-gray-200 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 bg-gray-50"
+                        locale="fr"
                       />
                     </div>
+                    {dateError && (
+                      <div className="text-red-600 text-sm mt-1">
+                        {dateError}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -247,29 +314,37 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
                 )}
               </div>
 
-              {/* Contrat */}
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="accept-terms"
-                    checked={hasAcceptedTerms}
-                    onChange={(e) => setHasAcceptedTerms(e.target.checked)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label
-                    htmlFor="accept-terms"
-                    className="ml-2 block text-sm text-gray-700"
-                  >
-                    J'accepte les{" "}
-                    <button
-                      type="button"
-                      onClick={() => setShowContract(true)}
-                      className="text-blue-600 hover:text-blue-700 hover:underline focus:outline-none font-medium"
-                    >
-                      conditions de location
-                    </button>
-                  </label>
+              {/* Conditions de location */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="terms"
+                        checked={hasAcceptedTerms}
+                        onChange={(e) => setHasAcceptedTerms(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        disabled={!startDate || !endDate}
+                      />
+                      <label htmlFor="terms" className="text-sm text-gray-700">
+                        J'accepte les{" "}
+                        <button
+                          type="button"
+                          onClick={() => setShowContract(true)}
+                          className="text-blue-600 hover:text-blue-700 font-medium underline"
+                        >
+                          conditions de location
+                        </button>
+                      </label>
+                    </div>
+                    {(!startDate || !endDate) && (
+                      <p className="text-xs text-gray-500 mt-1 ml-6">
+                        Sélectionnez les dates de réservation pour activer
+                        l'acceptation des conditions
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -293,7 +368,7 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isLoading || !hasAcceptedTerms}
+                  disabled={isLoading || !hasAcceptedTerms || !!dateError}
                   className="px-4 bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   {isLoading ? (

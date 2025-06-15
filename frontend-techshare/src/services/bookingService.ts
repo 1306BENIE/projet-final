@@ -57,6 +57,13 @@ class BookingService {
     const response = await api.put<Booking>(`/bookings/${id}/complete`);
     return response.data;
   }
+
+  async getBookedDates(toolId: string) {
+    const response = await api.get<{ startDate: string; endDate: string }[]>(
+      `/tools/${toolId}/booked-dates`
+    );
+    return response.data;
+  }
 }
 
 export const bookingService = new BookingService();

@@ -255,3 +255,23 @@ export const updateBooking = async (req: Request, res: Response) => {
   }
   return;
 };
+
+// GET /api/tools/:toolId/booked-dates
+export const getBookedDates = async (req: Request, res: Response) => {
+  try {
+    const { toolId } = req.params;
+    if (!Types.ObjectId.isValid(toolId)) {
+      return res.status(400).json({ message: "Invalid tool ID" });
+    }
+    const bookings = await Booking.find({
+      tool: toolId,
+      status: { $in: ["pending", "approved", "active"] },
+    }).select("startDate endDate -_id");
+
+    res.json(bookings);
+  } catch (error) {
+    res.status(500).json({
+      message: "Erreur serveur lors de la récupération des périodes réservées",
+    });
+  }
+};

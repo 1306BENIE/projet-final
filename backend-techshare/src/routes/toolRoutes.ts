@@ -6,6 +6,7 @@ import { validatePagination } from "../middleware/validatePagination";
 import { uploadMiddleware } from "../middleware/upload";
 import { validateTool } from "../middleware/validateTool";
 import { errorHandler } from "../middleware/errorHandler";
+import { getBookedDates } from "../controllers/bookingController";
 
 const router = express.Router();
 
@@ -433,5 +434,7 @@ router.get(
   validatePagination,
   errorHandler(toolController.getUserTools)
 );
+
+router.get("/:toolId/booked-dates", getBookedDates);
 
 export default router;

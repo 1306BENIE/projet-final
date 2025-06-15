@@ -1,8 +1,7 @@
 import { motion } from "framer-motion";
-import { X, Download, FileText } from "lucide-react";
+import { X, Download } from "lucide-react";
 import { format } from "date-fns";
 import { Tool } from "@/interfaces/tools/tool";
-import { Button } from "@/components/ui/Button/Button";
 import { jsPDF } from "jspdf";
 
 interface ContractModalProps {
@@ -128,15 +127,14 @@ export function ContractModal({
     );
 
     // 2. Conditions de Location
+    const hasValidDates = startDate !== "" && endDate !== "";
+    const dateText = hasValidDates
+      ? `La durée de la location est fixée du ${startDate} au ${endDate}.`
+      : "La durée de la location sera fixée lors de la réservation.";
+
     addSection(
       "2. Conditions de Location",
-      [
-        `La durée de la location est fixée du ${format(
-          new Date(startDate),
-          "dd/MM/yyyy"
-        )} au ${format(new Date(endDate), "dd/MM/yyyy")}.`,
-        "Le locataire doit :",
-      ],
+      [dateText, "Le locataire doit :"],
       [
         "Être majeur et capable",
         "Ne pas céder la location",
@@ -244,116 +242,91 @@ export function ContractModal({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
+        className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
       >
         {/* En-tête */}
         <div className="bg-gray-900 text-white p-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <FileText className="w-6 h-6" />
-              <h2 className="text-xl font-semibold">Contrat de Location</h2>
-            </div>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                onClick={handleDownloadPDF}
-                className="flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white border-white/20 h-10 px-4 py-2"
-              >
-                <div className="flex items-center gap-2">
-                  <Download className="w-4 h-4" />
-                  <span>Télécharger en PDF</span>
-                </div>
-              </Button>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-white/10 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <h2 className="text-xl font-bold">
+              Conditions Générales de Location
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-800 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
         {/* Contenu */}
-        <div className="p-8 overflow-y-auto max-h-[calc(90vh-8rem)]">
-          <div className="max-w-3xl mx-auto space-y-8">
-            {/* En-tête du contrat */}
-            <div className="text-center space-y-2">
-              <h1 className="text-2xl font-bold text-gray-900">TechShare</h1>
-              <p className="text-sm text-gray-500">
-                Dernière mise à jour : {format(new Date(), "dd/MM/yyyy")}
-              </p>
-            </div>
+        <div className="p-6 space-y-6">
+          {/* Introduction */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <p className="text-gray-700">
+              Toute réservation implique l'acceptation pleine et entière du
+              présent contrat.
+            </p>
+          </div>
 
-            {/* Introduction */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-              <p className="text-gray-600 text-sm">
-                Toute réservation implique l'acceptation pleine et entière du
-                présent contrat.
-              </p>
-            </div>
-
+          {/* Sections */}
+          <div className="space-y-6">
             {/* 1. Objet du Contrat */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
                 1. Objet du Contrat
               </h3>
-              <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 space-y-4">
-                <p className="text-gray-600">
+              <div className="space-y-2">
+                <p className="text-gray-700">
                   Le présent contrat régit les conditions de location de l'outil
                   suivant :
                 </p>
-                <div className="space-y-2">
-                  <p className="font-medium text-gray-900">{tool.name}</p>
-                  <p className="text-gray-600">
+                <ul className="list-disc list-inside space-y-1 text-gray-700">
+                  <li>{tool.name}</li>
+                  <li>
                     Propriétaire : {tool.owner.firstName} {tool.owner.lastName}
-                  </p>
-                  <p className="text-gray-600">
+                  </li>
+                  <li>
                     Prix de location : {tool.dailyPrice.toLocaleString()} FCFA /
                     jour
-                  </p>
-                  <p className="text-gray-600">
-                    Caution : {tool.caution?.toLocaleString() || 0} FCFA
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* 2. Conditions de Location */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                2. Conditions de Location
-              </h3>
-              <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 space-y-4">
-                <p className="text-gray-600">
-                  La durée de la location est fixée du{" "}
-                  {format(new Date(startDate), "dd/MM/yyyy")} au{" "}
-                  {format(new Date(endDate), "dd/MM/yyyy")}.
-                </p>
-                <ul className="list-disc list-inside space-y-2 text-gray-600">
-                  <li>Le locataire doit être majeur et capable</li>
-                  <li>La location est personnelle et ne peut être cédée</li>
-                  <li>
-                    Toute prolongation doit faire l'objet d'un nouvel accord
                   </li>
-                  <li>
-                    Le locataire doit présenter une pièce d'identité valide
-                  </li>
+                  <li>Caution : {tool.caution?.toLocaleString() || 0} FCFA</li>
                 </ul>
               </div>
-            </div>
+            </section>
+
+            {/* 2. Conditions de Location */}
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                2. Conditions de Location
+              </h3>
+              <div className="space-y-2">
+                <p className="text-gray-700">
+                  {startDate && endDate
+                    ? `La durée de la location est fixée du ${startDate} au ${endDate}.`
+                    : "La durée de la location sera fixée lors de la réservation."}
+                </p>
+                <p className="text-gray-700">Le locataire doit :</p>
+                <ul className="list-disc list-inside space-y-1 text-gray-700">
+                  <li>Être majeur et capable</li>
+                  <li>Ne pas céder la location</li>
+                  <li>Demander un nouvel accord pour toute prolongation</li>
+                  <li>Présenter une pièce d'identité valide</li>
+                </ul>
+              </div>
+            </section>
 
             {/* 3. Caution et Remboursement */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
                 3. Caution et Remboursement
               </h3>
-              <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 space-y-4">
-                <p className="text-gray-600">
+              <div className="space-y-2">
+                <p className="text-gray-700">
                   Une caution de {tool.caution?.toLocaleString() || 0} FCFA est
                   exigée pour toute location.
                 </p>
-                <ul className="list-disc list-inside space-y-2 text-gray-600">
+                <ul className="list-disc list-inside space-y-1 text-gray-700">
                   <li>
                     La caution est remboursée dans les 7 jours suivant le retour
                     de l'outil
@@ -372,16 +345,16 @@ export function ContractModal({
                   </li>
                 </ul>
               </div>
-            </div>
+            </section>
 
             {/* 4. Responsabilités */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
                 4. Responsabilités
               </h3>
-              <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 space-y-4">
-                <p className="text-gray-600">Le locataire s'engage à :</p>
-                <ul className="list-disc list-inside space-y-2 text-gray-600">
+              <div className="space-y-2">
+                <p className="text-gray-700">Le locataire s'engage à :</p>
+                <ul className="list-disc list-inside space-y-1 text-gray-700">
                   <li>
                     Utiliser l'outil conformément à sa destination normale
                   </li>
@@ -395,15 +368,15 @@ export function ContractModal({
                   <li>Respecter les consignes d'utilisation et de sécurité</li>
                 </ul>
               </div>
-            </div>
+            </section>
 
             {/* 5. Retour de l'outil */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">
+            <section>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
                 5. Retour de l'outil
               </h3>
-              <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 space-y-4">
-                <ul className="list-disc list-inside space-y-2 text-gray-600">
+              <div className="space-y-2">
+                <ul className="list-disc list-inside space-y-1 text-gray-700">
                   <li>
                     L'outil doit être retourné à la date et l'heure convenues
                   </li>
@@ -421,25 +394,18 @@ export function ContractModal({
                   </li>
                 </ul>
               </div>
-            </div>
+            </section>
+          </div>
 
-            {/* Acceptation */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Acceptation du contrat
-              </h3>
-              <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-                <p className="text-gray-600">
-                  En confirmant votre réservation, vous acceptez expressément
-                  les conditions générales de location ci-dessus. Cette
-                  acceptation vaut signature électronique et engage les deux
-                  parties.
-                </p>
-                <p className="text-gray-600 mt-4">
-                  Date d'acceptation : {format(new Date(), "dd/MM/yyyy")}
-                </p>
-              </div>
-            </div>
+          {/* Bouton de téléchargement */}
+          <div className="flex justify-end">
+            <button
+              onClick={handleDownloadPDF}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Télécharger le contrat
+            </button>
           </div>
         </div>
       </motion.div>
