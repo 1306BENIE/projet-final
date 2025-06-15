@@ -2,13 +2,15 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, differenceInDays } from "date-fns";
 import { X, Clock, Calendar } from "lucide-react";
-import { toast } from "sonner";
-import { bookingService } from "@/services/bookingService";
-import { CreateBookingDto } from "@/interfaces/booking/dto.interface";
+import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 import { Tool } from "@/interfaces/tools/tool";
-import { Button } from "@/components/ui/Button/Button";
-import { Input } from "@/components/ui/Input/Input";
-import { ContractModal } from "@/components/booking/ContractModal";
+import { CreateBookingDto } from "@/interfaces/booking/dto.interface";
+import { bookingService } from "@/services/bookingService";
+import { ContractModal } from "./ContractModal";
+import { AxiosError } from "axios";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -16,66 +18,93 @@ interface BookingModalProps {
   tool: Tool;
 }
 
-export function BookingModal({ isOpen, onClose, tool }: BookingModalProps) {
+export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
-  const [isContractModalOpen, setIsContractModalOpen] = useState(false);
+  const [showContract, setShowContract] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!startDate || !endDate) {
-      toast.error("Veuillez sélectionner les dates de réservation");
-      return;
-    }
-
-    if (!hasAcceptedTerms) {
-      toast.error("Veuillez accepter les conditions de location");
-      return;
-    }
-
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    if (start >= end) {
-      toast.error("La date de fin doit être après la date de début");
-      return;
-    }
-
-    const days = differenceInDays(end, start);
-    if (days < 1) {
-      toast.error("La durée minimale de réservation est de 1 jour");
-      return;
-    }
-
-    if (days > 30) {
-      toast.error("La durée maximale de réservation est de 30 jours");
-      return;
-    }
-
     setIsLoading(true);
+    setError(null);
 
     try {
+      if (!startDate || !endDate) {
+        throw new Error("Veuillez sélectionner les dates de réservation");
+      }
+
+      if (!hasAcceptedTerms) {
+        throw new Error("Veuillez accepter les conditions de location");
+      }
+
+      // Réinitialiser les heures à minuit pour la comparaison des dates
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+
+      const end = new Date(endDate);
+      end.setHours(0, 0, 0, 0);
+
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      // Validation des dates
+      if (start < now) {
+        throw new Error("La date de début doit être dans le futur");
+      }
+
+      if (end <= start) {
+        throw new Error("La date de fin doit être après la date de début");
+      }
+
+      // Calcul de la durée en jours
+      const duration = Math.ceil(
+        (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      if (duration < 1) {
+        throw new Error("La durée minimale de réservation est de 1 jour");
+      }
+      if (duration > 30) {
+        throw new Error("La durée maximale de réservation est de 30 jours");
+      }
+
       const bookingData: CreateBookingDto = {
         toolId: tool.id,
-        startDate: start,
-        endDate: end,
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
       };
 
+      console.log("Sending booking data:", bookingData);
       await bookingService.createBooking(bookingData);
-      toast.success("Réservation effectuée avec succès");
+
+      toast.success("Réservation créée avec succès !");
       onClose();
-    } catch (err) {
-      console.error("Erreur lors de la réservation:", err);
-      toast.error("Une erreur est survenue lors de la réservation");
+      navigate("/mes-reservations");
+    } catch (error) {
+      console.error("Booking error:", error);
+      if (error instanceof AxiosError) {
+        let msg =
+          error.response?.data?.message ||
+          "Une erreur est survenue lors de la création de la réservation";
+        if (msg === "Tool is not available for the selected dates") {
+          msg =
+            "L'outil est déjà réservé sur cette période. Veuillez choisir d'autres dates.";
+        }
+        setError(msg);
+      } else if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("Une erreur inattendue est survenue");
+      }
     } finally {
       setIsLoading(false);
     }
   };
-
-  if (!isOpen) return null;
 
   return (
     <AnimatePresence>
@@ -143,8 +172,12 @@ export function BookingModal({ isOpen, onClose, tool }: BookingModalProps) {
                     <div>
                       <Input
                         type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
+                        value={startDate ? format(startDate, "yyyy-MM-dd") : ""}
+                        onChange={(e) =>
+                          setStartDate(
+                            e.target.value ? new Date(e.target.value) : null
+                          )
+                        }
                         min={format(new Date(), "yyyy-MM-dd")}
                         required
                         className="w-full border-gray-200 focus:border-blue-500 focus:ring-blue-500"
@@ -153,9 +186,17 @@ export function BookingModal({ isOpen, onClose, tool }: BookingModalProps) {
                     <div>
                       <Input
                         type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        min={startDate || format(new Date(), "yyyy-MM-dd")}
+                        value={endDate ? format(endDate, "yyyy-MM-dd") : ""}
+                        onChange={(e) =>
+                          setEndDate(
+                            e.target.value ? new Date(e.target.value) : null
+                          )
+                        }
+                        min={
+                          startDate
+                            ? format(startDate, "yyyy-MM-dd")
+                            : format(new Date(), "yyyy-MM-dd")
+                        }
                         required
                         className="w-full border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                       />
@@ -223,7 +264,7 @@ export function BookingModal({ isOpen, onClose, tool }: BookingModalProps) {
                     J'accepte les{" "}
                     <button
                       type="button"
-                      onClick={() => setIsContractModalOpen(true)}
+                      onClick={() => setShowContract(true)}
                       className="text-blue-600 hover:text-blue-700 hover:underline focus:outline-none font-medium"
                     >
                       conditions de location
@@ -231,6 +272,13 @@ export function BookingModal({ isOpen, onClose, tool }: BookingModalProps) {
                   </label>
                 </div>
               </div>
+
+              {/* Message d'erreur */}
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+                  {error}
+                </div>
+              )}
 
               {/* Boutons */}
               <div className="flex justify-end space-x-3 pt-2">
@@ -262,15 +310,17 @@ export function BookingModal({ isOpen, onClose, tool }: BookingModalProps) {
           </form>
 
           {/* Modal du contrat */}
-          <ContractModal
-            isOpen={isContractModalOpen}
-            onClose={() => setIsContractModalOpen(false)}
-            tool={tool}
-            startDate={startDate}
-            endDate={endDate}
-          />
+          {showContract && (
+            <ContractModal
+              isOpen={showContract}
+              onClose={() => setShowContract(false)}
+              tool={tool}
+              startDate={startDate ? format(startDate, "yyyy-MM-dd") : ""}
+              endDate={endDate ? format(endDate, "yyyy-MM-dd") : ""}
+            />
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>
   );
-}
+};

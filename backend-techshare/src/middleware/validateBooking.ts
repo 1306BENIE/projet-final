@@ -65,7 +65,11 @@ export const validateBooking = (
         });
       }
 
-      if (start < new Date()) {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const startDay = new Date(start);
+      startDay.setHours(0, 0, 0, 0);
+      if (startDay < now) {
         return res.status(400).json({
           message: "Start date must be in the future",
         });

@@ -8,10 +8,10 @@ export interface CreateBookingDto {
   toolId: string;
 
   /** Start date of the booking period */
-  startDate: Date;
+  startDate: string | Date;
 
   /** End date of the booking period */
-  endDate: Date;
+  endDate: string | Date;
 
   /** Optional notes about the booking */
   notes?: string;
