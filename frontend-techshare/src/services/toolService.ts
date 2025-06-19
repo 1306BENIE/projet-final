@@ -60,6 +60,17 @@ interface ApiToolsResponse {
 
 // Fonction pour transformer les données de l'API
 function transformToolData(apiTool: ApiToolData): Tool {
+  if (!apiTool) {
+    console.error("Aucune donnée reçue pour l'outil !");
+    throw new Error("Données d'outil manquantes");
+  }
+  if (!apiTool.owner) {
+    console.warn("Owner manquant dans apiTool:", apiTool);
+  }
+  if (!apiTool.images || !apiTool.images.length) {
+    console.warn("Images manquantes dans apiTool:", apiTool);
+  }
+  console.log("API Tool reçu:", apiTool);
   const transformedTool: Tool = {
     id: apiTool._id,
     name: apiTool.name,
@@ -69,31 +80,37 @@ function transformToolData(apiTool: ApiToolData): Tool {
     category: apiTool.category,
     etat: apiTool.etat,
     dailyPrice: apiTool.dailyPrice,
-    caution: apiTool.caution,
+    caution: typeof apiTool.caution === "number" ? apiTool.caution : 0,
     isInsured: apiTool.isInsured,
-    owner: {
-      id: apiTool.owner._id,
-      firstName: apiTool.owner.firstName,
-      lastName: apiTool.owner.lastName,
-      email: apiTool.owner.email,
-      avatar: apiTool.owner.avatar,
-    },
-    images: apiTool.images,
+    owner:
+      apiTool.owner && typeof apiTool.owner === "object"
+        ? {
+            id: apiTool.owner._id || "",
+            firstName: apiTool.owner.firstName || "",
+            lastName: apiTool.owner.lastName || "",
+            email: apiTool.owner.email || "",
+            avatar: apiTool.owner.avatar || "",
+          }
+        : { id: "", firstName: "", lastName: "" },
+    images: Array.isArray(apiTool.images) ? apiTool.images : [],
     status: apiTool.status,
-    location: {
-      type: "Point",
-      coordinates: [
-        apiTool.location.coordinates[0],
-        apiTool.location.coordinates[1],
-      ] as [number, number],
-    },
-    address: apiTool.address,
+    location:
+      apiTool.location && Array.isArray(apiTool.location.coordinates)
+        ? {
+            type: "Point",
+            coordinates: [
+              apiTool.location.coordinates[0] || 0,
+              apiTool.location.coordinates[1] || 0,
+            ] as [number, number],
+          }
+        : { type: "Point", coordinates: [0, 0] },
+    address: apiTool.address || "",
     rating: apiTool.rating || 0,
     rentalCount: apiTool.rentalCount || 0,
     createdAt: apiTool.createdAt,
     updatedAt: apiTool.updatedAt,
   };
-
+  console.log("Tool transformé:", transformedTool);
   return transformedTool;
 }
 
@@ -124,20 +141,12 @@ export const toolService = {
    */
   async getTools(): Promise<Tool[]> {
     try {
-      const response = await api.get<ApiToolsResponse>("/tools");
-      if (!response.data || !response.data.tools) {
-        throw new Error("Format de réponse invalide");
-      }
-
-      const transformedTools = response.data.tools.map(transformToolData);
-      return transformedTools;
+      console.log("Fetching all tools...");
+      const response = await api.get<Tool[]>("/tools");
+      console.log("Tools response:", response.data);
+      return response.data;
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(
-          error.response?.data?.message ||
-            "Erreur lors de la récupération des outils"
-        );
-      }
+      console.error("Error fetching tools:", error);
       throw error;
     }
   },
@@ -146,35 +155,25 @@ export const toolService = {
    * Récupère un outil par son ID depuis l'API
    */
   async getToolById(id: string): Promise<Tool> {
-    if (!id) {
-      throw new Error("ID d'outil manquant");
-    }
-
     try {
-      console.log("Fetching tool with ID:", id);
-      const response = await api.get<ApiResponse<ApiToolData>>(`/tools/${id}`);
-
-      if (!response.data || !response.data.tool) {
-        throw new Error("Données d'outil manquantes dans la réponse");
+      if (!id) {
+        throw new Error("Tool ID is required");
       }
+      console.log(`Fetching tool with ID: ${id}`);
+      const response = await api.get<{ message: string; tool: Tool }>(
+        `/tools/${id}`
+      );
+      console.log("Tool response:", response.data);
 
-      return transformToolData(response.data.tool);
+      // Extraire l'outil de la réponse
+      if (response.data && response.data.tool) {
+        return response.data.tool;
+      } else {
+        throw new Error("Tool data not found in response");
+      }
     } catch (error) {
-      console.error("Erreur lors de la récupération de l'outil:", error);
-
-      if (axios.isAxiosError(error)) {
-        if (error.response?.status === 404) {
-          throw new Error("Outil non trouvé");
-        }
-        if (error.response?.status === 400) {
-          throw new Error("Format d'ID invalide");
-        }
-        if (error.response?.status === 500) {
-          throw new Error("Erreur serveur lors de la récupération de l'outil");
-        }
-      }
-
-      throw new Error("Erreur lors de la récupération de l'outil");
+      console.error(`Error fetching tool ${id}:`, error);
+      throw error;
     }
   },
 
@@ -187,10 +186,10 @@ export const toolService = {
       const response = await api.get<ApiToolsResponse>("/tools/user/tools");
       console.log("Response received:", response.data);
 
-    if (!response.data || !response.data.tools) {
+      if (!response.data || !response.data.tools) {
         console.error("Invalid response format:", response.data);
-      throw new Error("Format de réponse invalide");
-    }
+        throw new Error("Format de réponse invalide");
+      }
 
       const transformedTools = response.data.tools.map(transformToolData);
       console.log("Transformed tools:", transformedTools);

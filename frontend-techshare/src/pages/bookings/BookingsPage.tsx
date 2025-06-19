@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/store/useAuth";
 import { Booking, BookingStatus } from "@/interfaces/booking/booking.interface";
-import BookingList from "@/components/bookings/BookingList";
-import { BookingDetails } from "@/components/bookings/BookingDetails";
+import { Tool } from "@/interfaces/tools/tool";
+import { BookingCard } from "@/components/booking/BookingCard";
+import { BookingDetailsModal } from "@/components/booking/BookingDetailsModal";
 import {
   Calendar,
   Filter,
@@ -18,6 +19,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { bookingService } from "@/services/bookingService";
+import { toolService } from "@/services/toolService";
+import { toast } from "react-hot-toast";
 
 type SortField = "date" | "price" | "status";
 type SortOrder = "asc" | "desc";
@@ -42,7 +45,11 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
 export default function BookingsPage() {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [tools, setTools] = useState<Record<string, Tool>>({});
+  const [selectedBooking, setSelectedBooking] = useState<{
+    booking: Booking;
+    tool: Tool;
+  } | null>(null);
   const [statusFilter, setStatusFilter] = useState<BookingStatus | "ALL">(
     "ALL"
   );
@@ -57,49 +64,69 @@ export default function BookingsPage() {
   const loadBookings = useCallback(async () => {
     if (user) {
       try {
+        console.log("Loading bookings for user:", user);
         const data = await bookingService.getBookings();
+        console.log("Received bookings:", data);
         setBookings(data);
+
+        // Récupérer les outils de manière séquentielle pour éviter les problèmes de race condition
+        const toolMap: Record<string, Tool> = {};
+        for (const booking of data) {
+          if (!booking.toolId) {
+            console.error("Booking without toolId:", booking);
+            continue;
+          }
+
+          try {
+            console.log("Fetching tool:", booking.toolId);
+            const tool = await toolService.getToolById(booking.toolId);
+            console.log("Received tool:", tool);
+            toolMap[booking.toolId] = tool;
+          } catch (error) {
+            console.error(`Error fetching tool ${booking.toolId}:`, error);
+            // Créer un outil par défaut pour les outils non trouvés
+            toolMap[booking.toolId] = {
+              id: booking.toolId,
+              name: "Outil non disponible",
+              brand: "N/A",
+              model: "N/A",
+              description: "Cet outil n'est plus disponible",
+              category: "N/A",
+              etat: "N/A",
+              dailyPrice: booking.totalPrice,
+              caution: 0,
+              isInsured: false,
+              owner: {
+                id: "deleted",
+                firstName: "Compte",
+                lastName: "supprimé",
+              },
+              images: ["/img/fallback-tool.png"],
+              status: "maintenance",
+              location: { type: "Point", coordinates: [0, 0] },
+              address: "N/A",
+              rating: 0,
+              rentalCount: 0,
+              createdAt: booking.createdAt,
+              updatedAt: booking.createdAt,
+            };
+          }
+        }
+        console.log("Final toolMap:", toolMap);
+        setTools(toolMap);
       } catch (error) {
         console.error("Error loading bookings:", error);
+        toast.error(
+          "Une erreur est survenue lors du chargement des réservations"
+        );
       }
     }
   }, [user]);
 
   useEffect(() => {
+    console.log("BookingsPage mounted, loading bookings...");
     loadBookings();
   }, [loadBookings]);
-
-  const handleBookingSelect = (booking: Booking) => {
-    setSelectedBooking(booking);
-  };
-
-  const filteredBookings = bookings.filter((booking) => {
-    const matchesStatus =
-      statusFilter === "ALL" || booking.status === statusFilter;
-    const matchesSearch =
-      searchQuery === "" ||
-      booking.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.toolId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.notes?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
-
-  const sortedBookings = [...filteredBookings].sort((a, b) => {
-    const multiplier = sortOrder === "asc" ? 1 : -1;
-    switch (sortField) {
-      case "date":
-        return (
-          multiplier *
-          (new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
-        );
-      case "price":
-        return multiplier * (a.totalPrice - b.totalPrice);
-      case "status":
-        return multiplier * a.status.localeCompare(b.status);
-      default:
-        return 0;
-    }
-  });
 
   const handleFilterChange = (status: BookingStatus | "ALL") => {
     setStatusFilter(status);
@@ -116,6 +143,9 @@ export default function BookingsPage() {
       setStatusFilter("ALL");
     }
   };
+
+  console.log("Current bookings:", bookings);
+  console.log("Current tools:", tools);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200">
@@ -408,34 +438,53 @@ export default function BookingsPage() {
           </div>
         </motion.div>
 
-        {/* Liste des réservations */}
+        {/* Liste des réservations moderne */}
         <motion.div
           initial="initial"
           animate="animate"
           variants={fadeIn}
           className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100"
         >
-          <BookingList
-            bookings={sortedBookings}
-            onBookingSelect={handleBookingSelect}
-            selectedBookingId={selectedBooking?.id}
-          />
+          <div className="space-y-6">
+            {bookings.map((booking) => {
+              if (!booking.toolId) return null;
+
+              const tool = tools[booking.toolId];
+              if (!tool) return null;
+
+              return (
+                <BookingCard
+                  key={
+                    booking.id + "-" + booking.toolId + "-" + booking.startDate
+                  }
+                  booking={{
+                    toolName: tool.name,
+                    reservedAt: booking.createdAt,
+                    startDate: booking.startDate,
+                    endDate: booking.endDate,
+                    price: booking.totalPrice.toLocaleString(),
+                    status: booking.status.toLowerCase(),
+                    paymentStatus: booking.paymentStatus.toLowerCase(),
+                    owner: tool.owner
+                      ? `${tool.owner.firstName} ${tool.owner.lastName}`.trim()
+                      : "Propriétaire inconnu",
+                    image: tool.images?.[0] || "/img/fallback-tool.png",
+                  }}
+                  onDetails={() => setSelectedBooking({ booking, tool })}
+                />
+              );
+            })}
+          </div>
         </motion.div>
 
-        {/* Détails de la réservation */}
+        {/* Modale de détails moderne */}
         <AnimatePresence>
           {selectedBooking && (
-            <BookingDetails
-              booking={selectedBooking}
+            <BookingDetailsModal
+              isOpen={!!selectedBooking}
               onClose={() => setSelectedBooking(null)}
-              onUpdate={(updatedBooking) => {
-                setBookings((prev) =>
-                  prev.map((b) =>
-                    b.id === updatedBooking.id ? updatedBooking : b
-                  )
-                );
-                setSelectedBooking(updatedBooking);
-              }}
+              booking={selectedBooking.booking}
+              tool={selectedBooking.tool}
             />
           )}
         </AnimatePresence>
