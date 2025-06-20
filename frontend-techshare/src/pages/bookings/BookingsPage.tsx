@@ -1,9 +1,12 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/store/useAuth";
 import { Booking, BookingStatus } from "@/interfaces/booking/booking.interface";
 import { Tool } from "@/interfaces/tools/tool";
 import { BookingCard } from "@/components/booking/BookingCard";
 import { BookingDetailsModal } from "@/components/booking/BookingDetailsModal";
+import { CancelBookingModal } from "@/components/booking/CancelBookingModal";
+import { Pagination } from "@/components/ui/Pagination";
+import { usePagination } from "@/hooks/usePagination";
 import {
   Calendar,
   Filter,
@@ -21,9 +24,25 @@ import { motion, AnimatePresence } from "framer-motion";
 import { bookingService } from "@/services/bookingService";
 import { toolService } from "@/services/toolService";
 import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 type SortField = "date" | "price" | "status";
 type SortOrder = "asc" | "desc";
+
+interface CancellationInfo {
+  canCancel: boolean;
+  reason: string;
+  fee: number;
+  refundAmount: number;
+  hoursUntilStart: number;
+  daysUntilStart: number;
+}
+
+interface CancellationModalState {
+  isOpen: boolean;
+  booking: Booking | null;
+  cancellationInfo: CancellationInfo | null;
+}
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -44,12 +63,32 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
 
 export default function BookingsPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [tools, setTools] = useState<Record<string, Tool>>({});
   const [selectedBooking, setSelectedBooking] = useState<{
     booking: Booking;
     tool: Tool;
   } | null>(null);
+
+  // Ref pour éviter les appels API répétés en mode développement
+  const isLoadingRef = useRef(false);
+
+  // Pagination - destructurer les valeurs pour éviter les re-rendus infinis
+  const { page, limit, totalPages, setTotal, goToPage } = usePagination({
+    initialLimit: 10,
+  });
+
+  // Cancellation state
+  const [cancellationModal, setCancellationModal] =
+    useState<CancellationModalState>({
+      isOpen: false,
+      booking: null,
+      cancellationInfo: null,
+    });
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  // Search and filter state
   const [statusFilter, setStatusFilter] = useState<BookingStatus | "ALL">(
     "ALL"
   );
@@ -61,17 +100,21 @@ export default function BookingsPage() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
 
+  // Load bookings with pagination - utiliser les valeurs destructurées comme dépendances
   const loadBookings = useCallback(async () => {
-    if (user) {
+    if (user && !isLoadingRef.current) {
+      isLoadingRef.current = true;
       try {
         console.log("Loading bookings for user:", user);
-        const data = await bookingService.getBookings();
-        console.log("Received bookings:", data);
-        setBookings(data);
+        const response = await bookingService.getBookings(page, limit);
+        console.log("Received bookings response:", response);
 
-        // Récupérer les outils de manière séquentielle pour éviter les problèmes de race condition
+        setBookings(response.bookings);
+        setTotal(response.pagination.total);
+
+        // Fetch tools for each booking
         const toolMap: Record<string, Tool> = {};
-        for (const booking of data) {
+        for (const booking of response.bookings) {
           if (!booking.toolId) {
             console.error("Booking without toolId:", booking);
             continue;
@@ -84,7 +127,7 @@ export default function BookingsPage() {
             toolMap[booking.toolId] = tool;
           } catch (error) {
             console.error(`Error fetching tool ${booking.toolId}:`, error);
-            // Créer un outil par défaut pour les outils non trouvés
+            // Create default tool for deleted tools
             toolMap[booking.toolId] = {
               id: booking.toolId,
               name: "Outil non disponible",
@@ -119,21 +162,106 @@ export default function BookingsPage() {
         toast.error(
           "Une erreur est survenue lors du chargement des réservations"
         );
+      } finally {
+        isLoadingRef.current = false;
       }
     }
-  }, [user]);
+  }, [user, page, limit, setTotal]);
 
   useEffect(() => {
     console.log("BookingsPage mounted, loading bookings...");
     loadBookings();
   }, [loadBookings]);
 
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    goToPage(newPage);
+  };
+
+  // Handle cancellation
+  const handleCancelClick = async (booking: Booking) => {
+    try {
+      console.log("Attempting to cancel booking:", booking.id);
+      console.log("Booking details:", booking);
+
+      console.log("About to call bookingService.getCancellationEligibility...");
+      const response = await bookingService.getCancellationEligibility(
+        booking.id
+      );
+      console.log("Cancellation eligibility response:", response);
+
+      setCancellationModal({
+        isOpen: true,
+        booking,
+        cancellationInfo: response.cancellationInfo,
+      });
+
+      // Version temporaire - simulation de l'annulation (COMMENTÉE)
+      /*
+      const mockCancellationInfo = {
+        canCancel: true,
+        reason: "Annulation possible",
+        fee: 0,
+        refundAmount: booking.totalPrice,
+        hoursUntilStart: 24,
+        daysUntilStart: 1,
+      };
+      
+      console.log("Using mock cancellation info:", mockCancellationInfo);
+      
+      setCancellationModal({
+        isOpen: true,
+        booking,
+        cancellationInfo: mockCancellationInfo,
+      });
+      */
+    } catch (error) {
+      console.error("Error getting cancellation eligibility:", error);
+      console.error("Error details:", {
+        message: error instanceof Error ? error.message : "Unknown error",
+        response:
+          error instanceof Error
+            ? (error as { response?: { status?: number } }).response
+            : null,
+        status:
+          error instanceof Error
+            ? (error as { response?: { status?: number } }).response?.status
+            : null,
+      });
+      toast.error(
+        "Erreur lors de la vérification de l'éligibilité à l'annulation"
+      );
+    }
+  };
+
+  const handleCancelConfirm = async (reason: string) => {
+    if (!cancellationModal.booking) return;
+
+    setIsCancelling(true);
+    try {
+      await bookingService.cancelBooking(cancellationModal.booking.id, reason);
+      toast.success("Réservation annulée avec succès");
+      setCancellationModal({
+        isOpen: false,
+        booking: null,
+        cancellationInfo: null,
+      });
+      loadBookings(); // Reload bookings
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      toast.error("Erreur lors de l'annulation de la réservation");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  // Filter and sort functions
   const handleFilterChange = (status: BookingStatus | "ALL") => {
     setStatusFilter(status);
-    if (status !== "ALL" && !activeFilters.includes(status)) {
-      setActiveFilters([...activeFilters, status]);
-    } else if (status === "ALL") {
+    if (status === "ALL") {
       setActiveFilters([]);
+    } else {
+      setActiveFilters([status]);
     }
   };
 
@@ -142,6 +270,55 @@ export default function BookingsPage() {
     if (statusFilter === status) {
       setStatusFilter("ALL");
     }
+  };
+
+  // Filter bookings based on search and status
+  const filteredBookings = bookings.filter((booking) => {
+    const tool = tools[booking.toolId];
+    const toolName = tool?.name || "Outil inconnu";
+
+    const matchesSearch =
+      searchQuery === "" ||
+      toolName.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === "ALL" || booking.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  // Sort bookings
+  const sortedBookings = [...filteredBookings].sort((a, b) => {
+    let aValue: string | number | Date;
+    let bValue: string | number | Date;
+
+    switch (sortField) {
+      case "date":
+        aValue = new Date(a.startDate).getTime();
+        bValue = new Date(b.startDate).getTime();
+        break;
+      case "price":
+        aValue = a.totalPrice;
+        bValue = b.totalPrice;
+        break;
+      case "status":
+        aValue = a.status;
+        bValue = b.status;
+        break;
+      default:
+        return 0;
+    }
+
+    if (sortOrder === "asc") {
+      return aValue > bValue ? 1 : -1;
+    } else {
+      return aValue < bValue ? 1 : -1;
+    }
+  });
+
+  // Check if booking can be cancelled
+  const canCancelBooking = (booking: Booking) => {
+    return ["pending", "approved"].includes(booking.status);
   };
 
   console.log("Current bookings:", bookings);
@@ -169,6 +346,7 @@ export default function BookingsPage() {
                 </p>
               </div>
               <button
+                onClick={() => navigate("/tools")}
                 className="flex items-center gap-2 px-6 h-12 rounded-xl font-semibold text-white text-base shadow-lg hover:shadow-xl transition-all duration-200"
                 style={{ background: MAIN_COLOR }}
               >
@@ -446,35 +624,69 @@ export default function BookingsPage() {
           className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100"
         >
           <div className="space-y-6">
-            {bookings.map((booking) => {
-              if (!booking.toolId) return null;
+            {sortedBookings.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-gray-400 mb-4">
+                  <Calendar className="w-16 h-16 mx-auto" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Aucune réservation trouvée
+                </h3>
+                <p className="text-gray-500">
+                  {searchQuery || statusFilter !== "ALL"
+                    ? "Aucune réservation ne correspond à vos critères de recherche."
+                    : "Vous n'avez pas encore de réservations."}
+                </p>
+              </div>
+            ) : (
+              sortedBookings.map((booking) => {
+                if (!booking.toolId) return null;
 
-              const tool = tools[booking.toolId];
-              if (!tool) return null;
+                const tool = tools[booking.toolId];
+                if (!tool) return null;
 
-              return (
-                <BookingCard
-                  key={
-                    booking.id + "-" + booking.toolId + "-" + booking.startDate
-                  }
-                  booking={{
-                    toolName: tool.name,
-                    reservedAt: booking.createdAt,
-                    startDate: booking.startDate,
-                    endDate: booking.endDate,
-                    price: booking.totalPrice.toLocaleString(),
-                    status: booking.status.toLowerCase(),
-                    paymentStatus: booking.paymentStatus.toLowerCase(),
-                    owner: tool.owner
-                      ? `${tool.owner.firstName} ${tool.owner.lastName}`.trim()
-                      : "Propriétaire inconnu",
-                    image: tool.images?.[0] || "/img/fallback-tool.png",
-                  }}
-                  onDetails={() => setSelectedBooking({ booking, tool })}
-                />
-              );
-            })}
+                return (
+                  <BookingCard
+                    key={
+                      booking.id +
+                      "-" +
+                      booking.toolId +
+                      "-" +
+                      booking.startDate
+                    }
+                    booking={{
+                      toolName: tool.name,
+                      reservedAt: booking.createdAt,
+                      startDate: booking.startDate,
+                      endDate: booking.endDate,
+                      price: booking.totalPrice.toLocaleString(),
+                      status: booking.status.toLowerCase(),
+                      paymentStatus: booking.paymentStatus.toLowerCase(),
+                      owner: tool.owner
+                        ? `${tool.owner.firstName} ${tool.owner.lastName}`.trim()
+                        : "Propriétaire inconnu",
+                      image: tool.images?.[0] || "/img/fallback-tool.png",
+                    }}
+                    onDetails={() => setSelectedBooking({ booking, tool })}
+                    onCancel={() => handleCancelClick(booking)}
+                    canCancel={canCancelBooking(booking)}
+                    isCancelling={isCancelling}
+                  />
+                );
+              })
+            )}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-8">
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
+            </div>
+          )}
         </motion.div>
 
         {/* Modale de détails moderne */}
@@ -487,6 +699,35 @@ export default function BookingsPage() {
               tool={selectedBooking.tool}
             />
           )}
+        </AnimatePresence>
+
+        {/* Modale d'annulation */}
+        <AnimatePresence>
+          {cancellationModal.isOpen &&
+            cancellationModal.booking &&
+            cancellationModal.cancellationInfo && (
+              <CancelBookingModal
+                isOpen={cancellationModal.isOpen}
+                onClose={() =>
+                  setCancellationModal({
+                    isOpen: false,
+                    booking: null,
+                    cancellationInfo: null,
+                  })
+                }
+                onConfirm={handleCancelConfirm}
+                booking={{
+                  id: cancellationModal.booking.id,
+                  toolName:
+                    tools[cancellationModal.booking.toolId]?.name ||
+                    "Outil inconnu",
+                  startDate: cancellationModal.booking.startDate,
+                  totalPrice: cancellationModal.booking.totalPrice,
+                }}
+                cancellationInfo={cancellationModal.cancellationInfo}
+                isLoading={isCancelling}
+              />
+            )}
         </AnimatePresence>
       </div>
     </div>

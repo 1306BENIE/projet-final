@@ -23,7 +23,7 @@ export default function ToolsList() {
         setLoading(true);
         const data = await toolService.getTools();
         setTools(data);
-      } catch (error) {
+      } catch {
         toast.error("Erreur lors du chargement des outils");
         setTools([]);
       } finally {

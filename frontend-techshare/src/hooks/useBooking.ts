@@ -44,7 +44,8 @@ export function useBooking() {
     try {
       setLoading("get", true);
       setError(null);
-      return await bookingService.getBookings();
+      const response = await bookingService.getBookings();
+      return response.bookings;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue");
       return [];
@@ -101,8 +102,8 @@ export function useBooking() {
     try {
       setLoading("cancel", true);
       setError(null);
-      const booking = await bookingService.cancelBooking(id);
-      return booking || null;
+      const response = await bookingService.cancelBooking(id);
+      return response.booking || null;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur est survenue");
       return null;

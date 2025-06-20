@@ -55,6 +55,68 @@ const router = express.Router();
 
 /**
  * @swagger
+ * /api/bookings/test-no-auth:
+ *   get:
+ *     tags: [Bookings]
+ *     summary: Test endpoint for bookings without auth
+ *     responses:
+ *       200:
+ *         description: Test successful
+ */
+router.get("/test-no-auth", (req, res) => {
+  res.json({
+    message: "Bookings routes are working without auth",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+/**
+ * @swagger
+ * /api/bookings/test:
+ *   get:
+ *     tags: [Bookings]
+ *     summary: Test endpoint for bookings
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Test successful
+ */
+router.get("/test", auth, (req, res) => {
+  res.json({
+    message: "Bookings routes are working",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+/**
+ * @swagger
+ * /api/bookings/test-validate/{id}:
+ *   get:
+ *     tags: [Bookings]
+ *     summary: Test validateObjectId middleware
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Test successful
+ */
+router.get("/test-validate/:id", auth, validateObjectId("id"), (req, res) => {
+  res.json({
+    message: "validateObjectId middleware works",
+    id: req.params.id,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+/**
+ * @swagger
  * /api/bookings:
  *   post:
  *     summary: Create a new booking
@@ -191,7 +253,42 @@ router.get(
  *       404:
  *         description: Booking not found
  */
-router.get("/:id", auth, validateObjectId, bookingController.getBookingById);
+router.get(
+  "/:id",
+  auth,
+  validateObjectId("id"),
+  bookingController.getBookingById
+);
+
+/**
+ * @swagger
+ * /api/bookings/{id}/cancel-eligibility:
+ *   get:
+ *     tags: [Bookings]
+ *     summary: Check cancellation eligibility for a booking
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Booking ID
+ *     responses:
+ *       200:
+ *         description: Cancellation eligibility information
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Booking not found
+ */
+router.get(
+  "/:id/cancel-eligibility",
+  auth,
+  validateObjectId("id"),
+  bookingController.getCancellationEligibility
+);
 
 /**
  * @swagger
@@ -219,7 +316,7 @@ router.get("/:id", auth, validateObjectId, bookingController.getBookingById);
 router.post(
   "/:id/cancel",
   auth,
-  validateObjectId,
+  validateObjectId("id"),
   bookingController.cancelBooking
 );
 
@@ -259,18 +356,41 @@ router.post(
  *       404:
  *         description: Booking not found
  */
-router.put("/:id", auth, validateObjectId, bookingController.updateBooking);
+router.put(
+  "/:id",
+  auth,
+  validateObjectId("id"),
+  bookingController.updateBooking
+);
 
-router.get("/", auth, async (req, res) => {
-  try {
-    const bookings = await Booking.find();
-    res.json(bookings);
-  } catch (error) {
-    res.status(500).json({
-      message: "Erreur lors de la récupération des réservations",
-      error,
-    });
-  }
-});
+/**
+ * @swagger
+ * /api/bookings:
+ *   get:
+ *     summary: Get all bookings (with pagination)
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: List of bookings with pagination
+ *       401:
+ *         description: Unauthorized
+ */
+router.get("/", auth, validatePagination, bookingController.getAllBookings);
 
 export default router;

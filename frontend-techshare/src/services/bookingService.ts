@@ -7,6 +7,29 @@ interface UpdateBookingDto {
   totalPrice?: number;
 }
 
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+interface BookingsResponse {
+  bookings: Booking[];
+  pagination: PaginationInfo;
+}
+
+interface CancellationInfo {
+  canCancel: boolean;
+  reason: string;
+  fee: number;
+  refundAmount: number;
+  hoursUntilStart: number;
+  daysUntilStart: number;
+}
+
 // Fonction utilitaire pour valider une réservation
 function isValidBooking(booking: unknown): booking is Booking {
   if (!booking || typeof booking !== "object" || booking === null) {
@@ -32,39 +55,132 @@ class BookingService {
     return response.data;
   }
 
-  async getBookings(): Promise<Booking[]> {
+  async getBookings(page = 1, limit = 10): Promise<BookingsResponse> {
     try {
-      console.log("Fetching bookings...");
-      const response = await api.get<Booking[]>("/bookings");
+      console.log("Fetching bookings with pagination...", { page, limit });
+      const response = await api.get<BookingsResponse>("/bookings", {
+        params: { page, limit },
+      });
       console.log("Bookings response:", response.data);
 
-      if (!Array.isArray(response.data)) {
-        console.error("Response data is not an array:", response.data);
-        return [];
+      if (!response.data.bookings || !Array.isArray(response.data.bookings)) {
+        console.error("Invalid bookings response:", response.data);
+        return {
+          bookings: [],
+          pagination: {
+            page: 1,
+            limit: 10,
+            total: 0,
+            totalPages: 0,
+            hasNext: false,
+            hasPrev: false,
+          },
+        };
       }
 
-      const validBookings = response.data.filter((booking) => {
-        // Accepter soit toolId soit tool (l'API peut retourner l'un ou l'autre)
+      // Validate and filter bookings
+      const validBookings = response.data.bookings.filter((booking) => {
+        if (!booking || typeof booking !== "object") {
+          console.warn("Invalid booking found:", booking);
+          return false;
+        }
+
         const bookingData = booking as unknown as Record<string, unknown>;
-        const toolId = bookingData.toolId || bookingData.tool;
-        const isValid = booking && toolId && typeof toolId === "string";
+
+        // Handle different ID field names (_id vs id)
+        const id = bookingData.id || bookingData._id;
+
+        // Handle tool ID extraction
+        let toolId: string | undefined;
+        if (bookingData.toolId) {
+          toolId = bookingData.toolId as string;
+        } else if (bookingData.tool) {
+          if (
+            typeof bookingData.tool === "object" &&
+            bookingData.tool !== null
+          ) {
+            const toolObj = bookingData.tool as Record<string, unknown>;
+            toolId = (toolObj._id || toolObj.id) as string;
+            console.log("Extracted toolId from tool object:", toolId);
+          } else if (typeof bookingData.tool === "string") {
+            toolId = bookingData.tool;
+          }
+        }
+
+        // Check if we have the essential fields
+        const hasId = id && typeof id === "string";
+        const hasToolId = toolId && typeof toolId === "string";
+        const hasStartDate =
+          bookingData.startDate && typeof bookingData.startDate === "string";
+        const hasEndDate =
+          bookingData.endDate && typeof bookingData.endDate === "string";
+        const hasStatus =
+          bookingData.status && typeof bookingData.status === "string";
+        const hasTotalPrice = typeof bookingData.totalPrice === "number";
+
+        const isValid =
+          hasId &&
+          hasToolId &&
+          hasStartDate &&
+          hasEndDate &&
+          hasStatus &&
+          hasTotalPrice;
 
         if (!isValid) {
           console.warn("Invalid booking found:", booking);
+          console.log("Validation details:", {
+            hasId,
+            hasToolId,
+            hasStartDate,
+            hasEndDate,
+            hasStatus,
+            hasTotalPrice,
+            id: bookingData.id || bookingData._id,
+            toolId,
+            toolObject: bookingData.tool,
+            startDate: bookingData.startDate,
+            endDate: bookingData.endDate,
+            status: bookingData.status,
+            totalPrice: bookingData.totalPrice,
+          });
         } else {
-          // Normaliser la structure en s'assurant que toolId existe
-          if (!bookingData.toolId && bookingData.tool) {
-            bookingData.toolId = bookingData.tool;
+          // Normalize the structure for frontend use
+          if (!bookingData.id && bookingData._id) {
+            bookingData.id = bookingData._id;
+          }
+          if (!bookingData.toolId && toolId) {
+            bookingData.toolId = toolId;
           }
         }
         return isValid;
       });
 
       console.log("Valid bookings:", validBookings);
-      return validBookings;
+
+      return {
+        bookings: validBookings,
+        pagination: response.data.pagination || {
+          page: 1,
+          limit: 10,
+          total: 0,
+          totalPages: 0,
+          hasNext: false,
+          hasPrev: false,
+        },
+      };
     } catch (error) {
       console.error("Error fetching bookings:", error);
-      return [];
+      return {
+        bookings: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 0,
+          totalPages: 0,
+          hasNext: false,
+          hasPrev: false,
+        },
+      };
     }
   }
 
@@ -101,9 +217,109 @@ class BookingService {
     return response.data;
   }
 
-  async cancelBooking(id: string): Promise<Booking> {
-    const response = await api.put<Booking>(`/bookings/${id}/cancel`);
+  async cancelBooking(
+    id: string,
+    reason?: string
+  ): Promise<{ booking: Booking; cancellationInfo: CancellationInfo }> {
+    const response = await api.post<{
+      booking: Booking;
+      cancellationInfo: CancellationInfo;
+    }>(`/bookings/${id}/cancel`, {
+      reason,
+    });
     return response.data;
+  }
+
+  async getCancellationEligibility(id: string): Promise<{
+    booking: Record<string, unknown>;
+    cancellationInfo: CancellationInfo;
+  }> {
+    console.log(
+      "bookingService.getCancellationEligibility called with id:",
+      id
+    );
+    console.log("Making API call to:", `/bookings/${id}/cancel-eligibility`);
+
+    // Test simple pour vérifier si l'API répond
+    try {
+      console.log("Testing basic API connectivity...");
+      const testResponse = await api.get("/bookings", { timeout: 5000 });
+      console.log("Basic API test successful:", testResponse.status);
+    } catch (testError) {
+      console.error("Basic API test failed:", testError);
+      throw new Error("Backend API is not responding");
+    }
+
+    // Test de l'endpoint de booking simple
+    try {
+      console.log("Testing booking routes...");
+      const bookingTestResponse = await api.get("/bookings/test", {
+        timeout: 5000,
+      });
+      console.log("Booking routes test successful:", bookingTestResponse.data);
+    } catch (bookingTestError) {
+      console.error("Booking routes test failed:", bookingTestError);
+
+      // Test sans authentification
+      try {
+        console.log("Testing booking routes without auth...");
+        const noAuthResponse = await api.get("/bookings/test-no-auth", {
+          timeout: 5000,
+        });
+        console.log(
+          "Booking routes without auth test successful:",
+          noAuthResponse.data
+        );
+        throw new Error(
+          "Booking routes work without auth - problem with authentication middleware"
+        );
+      } catch (noAuthError) {
+        console.error("Booking routes without auth also failed:", noAuthError);
+        throw new Error("Booking routes are not working at all");
+      }
+    }
+
+    // Test du middleware validateObjectId
+    try {
+      console.log("Testing validateObjectId middleware...");
+      const validateTestResponse = await api.get(
+        `/bookings/test-validate/${id}`,
+        { timeout: 5000 }
+      );
+      console.log(
+        "validateObjectId middleware test successful:",
+        validateTestResponse.data
+      );
+    } catch (validateTestError) {
+      console.error(
+        "validateObjectId middleware test failed:",
+        validateTestError
+      );
+      throw new Error("validateObjectId middleware is not working");
+    }
+
+    try {
+      const response = await api.get<{
+        booking: Record<string, unknown>;
+        cancellationInfo: CancellationInfo;
+      }>(`/bookings/${id}/cancel-eligibility`, {
+        timeout: 10000, // 10 secondes de timeout
+      });
+
+      console.log("API response received:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error in getCancellationEligibility:", error);
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === "ECONNABORTED"
+      ) {
+        console.error("Request timed out after 10 seconds");
+      }
+      throw error;
+    }
   }
 
   async completeBooking(id: string): Promise<Booking> {

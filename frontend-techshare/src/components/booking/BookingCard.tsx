@@ -1,4 +1,4 @@
-import { Calendar, User, CreditCard } from "lucide-react";
+import { Calendar, User, CreditCard, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import React from "react";
 import { format } from "date-fns";
@@ -27,11 +27,17 @@ interface BookingCardProps {
     isDeleted?: boolean;
   };
   onDetails?: () => void;
+  onCancel?: () => void;
+  canCancel?: boolean;
+  isCancelling?: boolean;
 }
 
 export const BookingCard: React.FC<BookingCardProps> = ({
   booking,
   onDetails,
+  onCancel,
+  canCancel = false,
+  isCancelling = false,
 }) => {
   return (
     <div className="bg-white rounded-2xl shadow-lg p-8 flex flex-col md:flex-row items-center justify-between gap-6 border border-gray-200 hover:shadow-2xl transition-shadow duration-300">
@@ -78,19 +84,42 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col items-center md:items-end gap-2">
         <Badge status={booking.status} />
         {booking.status !== booking.paymentStatus && (
           <Badge status={booking.paymentStatus} />
         )}
-        {onDetails && (
-          <button
-            onClick={onDetails}
-            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            Voir les détails
-          </button>
-        )}
+
+        <div className="flex gap-2 mt-2">
+          {onDetails && (
+            <button
+              onClick={onDetails}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Voir les détails
+            </button>
+          )}
+
+          {canCancel && onCancel && (
+            <button
+              onClick={onCancel}
+              disabled={isCancelling}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {isCancelling ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Annulation...
+                </>
+              ) : (
+                <>
+                  <X className="w-4 h-4" />
+                  Annuler
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ const validatePagination_1 = require("../middleware/validatePagination");
 const upload_1 = require("../middleware/upload");
 const validateTool_1 = require("../middleware/validateTool");
 const errorHandler_1 = require("../middleware/errorHandler");
+const bookingController_1 = require("../controllers/bookingController");
 const router = express_1.default.Router();
 /**
  * @swagger
@@ -403,5 +404,6 @@ router.delete("/:toolId", auth_1.auth, (0, validateObjectId_1.validateObjectId)(
  *         description: Erreur serveur
  */
 router.get("/user/tools", auth_1.auth, validatePagination_1.validatePagination, (0, errorHandler_1.errorHandler)(toolController_1.toolController.getUserTools));
+router.get("/:toolId/booked-dates", bookingController_1.getBookedDates);
 exports.default = router;
 //# sourceMappingURL=toolRoutes.js.map

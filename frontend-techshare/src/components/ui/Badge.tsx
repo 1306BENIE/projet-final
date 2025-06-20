@@ -54,7 +54,7 @@ export const Badge: React.FC<BadgeProps> = ({ status, className = "" }) => {
   const s = statusMap[status] || statusMap["pending"];
   return (
     <span
-      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${s.color} ${className}`}
+      className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[16px] font-semibold ${s.color} ${className}`}
     >
       {s.icon}
       {s.label}

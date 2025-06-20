@@ -53,7 +53,11 @@ const validateBooking = (req, res, next) => {
                     message: "Start date must be before end date",
                 });
             }
-            if (start < new Date()) {
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            const startDay = new Date(start);
+            startDay.setHours(0, 0, 0, 0);
+            if (startDay < now) {
                 return res.status(400).json({
                     message: "Start date must be in the future",
                 });

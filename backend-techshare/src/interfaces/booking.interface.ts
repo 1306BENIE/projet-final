@@ -65,6 +65,16 @@ export interface IBooking extends Document {
     /** Date of the notification */
     date: Date;
   }>;
+  /** Cancellation date */
+  cancelledAt?: Date;
+  /** User who cancelled the booking */
+  cancelledBy?: Types.ObjectId;
+  /** Reason for cancellation */
+  cancellationReason?: string;
+  /** Cancellation fee amount */
+  cancellationFee: number;
+  /** Refund amount after cancellation */
+  refundAmount: number;
   /** Creation date */
   createdAt: Date;
   /** Last update date */

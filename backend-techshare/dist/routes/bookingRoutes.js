@@ -42,7 +42,6 @@ const validateObjectId_1 = require("../middleware/validateObjectId");
 const validatePagination_1 = require("../middleware/validatePagination");
 const validateBooking_1 = require("../middleware/validateBooking");
 const bookingController = __importStar(require("../controllers/bookingController"));
-const Booking_1 = require("../models/Booking");
 const router = express_1.default.Router();
 /**
  * @swagger
@@ -88,6 +87,65 @@ const router = express_1.default.Router();
  *           type: string
  *           format: date-time
  */
+/**
+ * @swagger
+ * /api/bookings/test-no-auth:
+ *   get:
+ *     tags: [Bookings]
+ *     summary: Test endpoint for bookings without auth
+ *     responses:
+ *       200:
+ *         description: Test successful
+ */
+router.get("/test-no-auth", (req, res) => {
+    res.json({
+        message: "Bookings routes are working without auth",
+        timestamp: new Date().toISOString(),
+    });
+});
+/**
+ * @swagger
+ * /api/bookings/test:
+ *   get:
+ *     tags: [Bookings]
+ *     summary: Test endpoint for bookings
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Test successful
+ */
+router.get("/test", auth_middleware_1.auth, (req, res) => {
+    res.json({
+        message: "Bookings routes are working",
+        timestamp: new Date().toISOString(),
+    });
+});
+/**
+ * @swagger
+ * /api/bookings/test-validate/{id}:
+ *   get:
+ *     tags: [Bookings]
+ *     summary: Test validateObjectId middleware
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Test successful
+ */
+router.get("/test-validate/:id", auth_middleware_1.auth, (0, validateObjectId_1.validateObjectId)("id"), (req, res) => {
+    res.json({
+        message: "validateObjectId middleware works",
+        id: req.params.id,
+        timestamp: new Date().toISOString(),
+    });
+});
 /**
  * @swagger
  * /api/bookings:
@@ -213,7 +271,31 @@ router.get("/owner", auth_middleware_1.auth, validatePagination_1.validatePagina
  *       404:
  *         description: Booking not found
  */
-router.get("/:id", auth_middleware_1.auth, validateObjectId_1.validateObjectId, bookingController.getBookingById);
+router.get("/:id", auth_middleware_1.auth, (0, validateObjectId_1.validateObjectId)("id"), bookingController.getBookingById);
+/**
+ * @swagger
+ * /api/bookings/{id}/cancel-eligibility:
+ *   get:
+ *     tags: [Bookings]
+ *     summary: Check cancellation eligibility for a booking
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Booking ID
+ *     responses:
+ *       200:
+ *         description: Cancellation eligibility information
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Booking not found
+ */
+router.get("/:id/cancel-eligibility", auth_middleware_1.auth, (0, validateObjectId_1.validateObjectId)("id"), bookingController.getCancellationEligibility);
 /**
  * @swagger
  * /api/bookings/{id}/cancel:
@@ -237,7 +319,7 @@ router.get("/:id", auth_middleware_1.auth, validateObjectId_1.validateObjectId, 
  *       404:
  *         description: Booking not found
  */
-router.post("/:id/cancel", auth_middleware_1.auth, validateObjectId_1.validateObjectId, bookingController.cancelBooking);
+router.post("/:id/cancel", auth_middleware_1.auth, (0, validateObjectId_1.validateObjectId)("id"), bookingController.cancelBooking);
 /**
  * @swagger
  * /api/bookings/{id}:
@@ -274,18 +356,35 @@ router.post("/:id/cancel", auth_middleware_1.auth, validateObjectId_1.validateOb
  *       404:
  *         description: Booking not found
  */
-router.put("/:id", auth_middleware_1.auth, validateObjectId_1.validateObjectId, bookingController.updateBooking);
-router.get("/", auth_middleware_1.auth, async (req, res) => {
-    try {
-        const bookings = await Booking_1.Booking.find();
-        res.json(bookings);
-    }
-    catch (error) {
-        res.status(500).json({
-            message: "Erreur lors de la récupération des réservations",
-            error,
-        });
-    }
-});
+router.put("/:id", auth_middleware_1.auth, (0, validateObjectId_1.validateObjectId)("id"), bookingController.updateBooking);
+/**
+ * @swagger
+ * /api/bookings:
+ *   get:
+ *     summary: Get all bookings (with pagination)
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: List of bookings with pagination
+ *       401:
+ *         description: Unauthorized
+ */
+router.get("/", auth_middleware_1.auth, validatePagination_1.validatePagination, bookingController.getAllBookings);
 exports.default = router;
 //# sourceMappingURL=bookingRoutes.js.map

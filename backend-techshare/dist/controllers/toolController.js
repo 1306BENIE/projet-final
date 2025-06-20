@@ -224,10 +224,47 @@ exports.toolController = {
                 });
                 return;
             }
-            console.log("Outil trouvé:", tool);
+            // Mapping safeTool pour garantir la présence de tous les champs
+            const isOwnerPopulated = tool.owner &&
+                typeof tool.owner === "object" &&
+                ("firstName" in tool.owner || "lastName" in tool.owner);
+            const ownerObj = tool.owner;
+            const safeTool = {
+                _id: tool._id,
+                name: tool.name || "Nom inconnu",
+                brand: tool.brand || "",
+                modelName: tool.modelName || "",
+                description: tool.description || "",
+                category: tool.category || "",
+                etat: tool.etat || "",
+                dailyPrice: tool.dailyPrice || 0,
+                caution: tool.caution || 0,
+                isInsured: tool.isInsured || false,
+                owner: isOwnerPopulated
+                    ? {
+                        _id: ownerObj._id || "",
+                        firstName: ownerObj.firstName || "",
+                        lastName: ownerObj.lastName || "",
+                        email: ownerObj.email || "",
+                        avatar: ownerObj.avatar || "",
+                    }
+                    : { _id: "", firstName: "", lastName: "", email: "", avatar: "" },
+                images: Array.isArray(tool.images) ? tool.images : [],
+                status: tool.status || "maintenance",
+                location: tool.location || { type: "Point", coordinates: [0, 0] },
+                address: tool.address || "",
+                rating: tool.rating || 0,
+                rentalCount: tool.rentalCount || 0,
+                createdAt: tool.createdAt,
+                updatedAt: tool.updatedAt,
+                reviewsCount: typeof tool.reviewsCount === "number"
+                    ? tool.reviewsCount
+                    : 0,
+            };
+            console.log("Outil trouvé:", safeTool);
             res.status(200).json({
                 message: "Outil récupéré avec succès",
-                tool,
+                tool: safeTool,
             });
         }
         catch (error) {

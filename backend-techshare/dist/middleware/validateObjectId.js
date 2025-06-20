@@ -4,6 +4,8 @@ exports.validateObjectId = void 0;
 const mongoose_1 = require("mongoose");
 const validateObjectId = (paramName) => {
     return (req, res, next) => {
+        console.log(`=== validateObjectId called for ${paramName} ===`);
+        console.log(`URL: ${req.method} ${req.originalUrl}`);
         const id = req.params[paramName];
         console.log(`Validation de l'ID ${paramName}:`, id);
         console.log("Type de l'ID:", typeof id);
@@ -24,6 +26,7 @@ const validateObjectId = (paramName) => {
             });
         }
         console.log(`ID ${paramName} valide:`, id);
+        console.log(`=== validateObjectId passed for ${paramName} ===`);
         next();
     };
 };

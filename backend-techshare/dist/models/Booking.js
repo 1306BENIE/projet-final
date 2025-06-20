@@ -156,6 +156,29 @@ const bookingSchema = new mongoose_1.Schema({
             },
         },
     ],
+    // Cancellation fields
+    cancelledAt: {
+        type: Date,
+    },
+    cancelledBy: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "User",
+    },
+    cancellationReason: {
+        type: String,
+        trim: true,
+        maxlength: [500, "Cancellation reason cannot exceed 500 characters"],
+    },
+    cancellationFee: {
+        type: Number,
+        min: [0, "Cancellation fee cannot be negative"],
+        default: 0,
+    },
+    refundAmount: {
+        type: Number,
+        min: [0, "Refund amount cannot be negative"],
+        default: 0,
+    },
 }, {
     timestamps: true,
 });

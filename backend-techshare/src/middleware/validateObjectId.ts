@@ -4,6 +4,8 @@ import { ValidationError } from "../utils/errors";
 
 export const validateObjectId = (paramName: string) => {
   return (req: Request, res: Response, next: NextFunction) => {
+    console.log(`=== validateObjectId called for ${paramName} ===`);
+    console.log(`URL: ${req.method} ${req.originalUrl}`);
     const id = req.params[paramName];
     console.log(`Validation de l'ID ${paramName}:`, id);
     console.log("Type de l'ID:", typeof id);
@@ -27,6 +29,7 @@ export const validateObjectId = (paramName: string) => {
     }
 
     console.log(`ID ${paramName} valide:`, id);
+    console.log(`=== validateObjectId passed for ${paramName} ===`);
     next();
   };
 };

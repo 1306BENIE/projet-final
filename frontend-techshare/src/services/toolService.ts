@@ -142,9 +142,18 @@ export const toolService = {
   async getTools(): Promise<Tool[]> {
     try {
       console.log("Fetching all tools...");
-      const response = await api.get<Tool[]>("/tools");
+      const response = await api.get<ApiToolsResponse>("/tools");
       console.log("Tools response:", response.data);
-      return response.data;
+
+      // Transformer les données si elles ont la structure de l'API
+      if (response.data && response.data.tools) {
+        return response.data.tools.map(transformToolData);
+      } else if (Array.isArray(response.data)) {
+        // Si la réponse est directement un tableau d'outils déjà transformés
+        return response.data;
+      } else {
+        throw new Error("Invalid response format");
+      }
     } catch (error) {
       console.error("Error fetching tools:", error);
       throw error;
@@ -160,14 +169,14 @@ export const toolService = {
         throw new Error("Tool ID is required");
       }
       console.log(`Fetching tool with ID: ${id}`);
-      const response = await api.get<{ message: string; tool: Tool }>(
+      const response = await api.get<{ message: string; tool: ApiToolData }>(
         `/tools/${id}`
       );
       console.log("Tool response:", response.data);
 
-      // Extraire l'outil de la réponse
+      // Extraire l'outil de la réponse et le transformer
       if (response.data && response.data.tool) {
-        return response.data.tool;
+        return transformToolData(response.data.tool);
       } else {
         throw new Error("Tool data not found in response");
       }
