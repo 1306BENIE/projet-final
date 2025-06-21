@@ -13,7 +13,7 @@ import {
 } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { AlertCircle } from "lucide-react";
-import { BookingModal } from "@/components/booking/BookingModal";
+import { BookingModal } from "@/components/features/booking/BookingModal";
 
 const ToolDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();

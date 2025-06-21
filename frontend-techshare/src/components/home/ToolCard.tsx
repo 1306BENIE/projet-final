@@ -5,7 +5,7 @@ import type { Tool } from "@/interfaces/tools/tool";
 import { useState } from "react";
 import { useAuth } from "@/store/useAuth";
 import { toast } from "react-hot-toast";
-import { BookingModal } from "@/components/booking/BookingModal";
+import { BookingModal } from "@/components/features/booking/BookingModal";
 
 interface ToolCardProps {
   tool: Tool;

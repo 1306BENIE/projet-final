@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Tool } from "@/interfaces/tools/tool";
 import { useAuth } from "@/store/useAuth";
 import { toast } from "react-hot-toast";
-import { BookingModal } from "@/components/booking/BookingModal";
+import { BookingModal } from "@/components/features/booking/BookingModal";
 
 const shimmer =
   "before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent";

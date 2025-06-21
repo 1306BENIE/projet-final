@@ -359,6 +359,88 @@ router.post("/:id/cancel", auth_middleware_1.auth, (0, validateObjectId_1.valida
 router.put("/:id", auth_middleware_1.auth, (0, validateObjectId_1.validateObjectId)("id"), bookingController.updateBooking);
 /**
  * @swagger
+ * /api/bookings/{id}/confirm:
+ *   put:
+ *     summary: Confirm a booking (owner only)
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Booking ID
+ *     responses:
+ *       200:
+ *         description: Booking confirmed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 booking:
+ *                   $ref: '#/components/schemas/Booking'
+ *       400:
+ *         description: Invalid request
+ *       403:
+ *         description: Not authorized to confirm this booking
+ *       404:
+ *         description: Booking not found
+ *       409:
+ *         description: Date conflict with existing booking
+ */
+router.put("/:id/confirm", auth_middleware_1.auth, (0, validateObjectId_1.validateObjectId)("id"), bookingController.confirmBooking);
+/**
+ * @swagger
+ * /api/bookings/{id}/reject:
+ *   put:
+ *     summary: Reject a booking (owner only)
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Booking ID
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Optional reason for rejection
+ *     responses:
+ *       200:
+ *         description: Booking rejected successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 booking:
+ *                   $ref: '#/components/schemas/Booking'
+ *       400:
+ *         description: Invalid request
+ *       403:
+ *         description: Not authorized to reject this booking
+ *       404:
+ *         description: Booking not found
+ */
+router.put("/:id/reject", auth_middleware_1.auth, (0, validateObjectId_1.validateObjectId)("id"), bookingController.rejectBooking);
+/**
+ * @swagger
  * /api/bookings:
  *   get:
  *     summary: Get all bookings (with pagination)

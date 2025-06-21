@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { Tool } from "@/interfaces/tools/tool";
 import { CreateBookingDto } from "@/interfaces/booking/dto.interface";
 import { bookingService } from "@/services/bookingService";
-import { ContractModal } from "@/components/booking/ContractModal";
+import { ContractModal } from "@/components/features/booking/ContractModal";
 
 interface BookingModalProps {
   isOpen: boolean;

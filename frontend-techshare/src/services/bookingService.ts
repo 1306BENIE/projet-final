@@ -1,6 +1,10 @@
 import { Booking } from "@/interfaces/booking/booking.interface";
 import { CreateBookingDto } from "@/interfaces/booking/dto.interface";
 import api from "./api";
+import {
+  ReceivedBooking,
+  ReceivedBookingsResponse,
+} from "@/interfaces/booking/received-booking.interface";
 
 interface UpdateBookingDto {
   status?: string;
@@ -197,9 +201,25 @@ class BookingService {
     return response.data.filter(isValidBooking);
   }
 
-  async getReceivedBookings(): Promise<Booking[]> {
-    const response = await api.get<{ bookings: Booking[] }>("/bookings/owner");
-    return response.data.bookings.filter(isValidBooking);
+  async getReceivedBookings(): Promise<ReceivedBooking[]> {
+    try {
+      console.log("Fetching received bookings...");
+      const response = await api.get<ReceivedBookingsResponse>(
+        "/bookings/owner"
+      );
+      console.log("Received bookings response:", response.data);
+
+      if (response.data.bookings && Array.isArray(response.data.bookings)) {
+        console.log("Found bookings:", response.data.bookings.length);
+        return response.data.bookings;
+      } else {
+        console.error("Unexpected response structure:", response.data);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching received bookings:", error);
+      throw error;
+    }
   }
 
   async updateBooking(id: string, data: UpdateBookingDto): Promise<Booking> {
@@ -259,43 +279,7 @@ class BookingService {
       console.log("Booking routes test successful:", bookingTestResponse.data);
     } catch (bookingTestError) {
       console.error("Booking routes test failed:", bookingTestError);
-
-      // Test sans authentification
-      try {
-        console.log("Testing booking routes without auth...");
-        const noAuthResponse = await api.get("/bookings/test-no-auth", {
-          timeout: 5000,
-        });
-        console.log(
-          "Booking routes without auth test successful:",
-          noAuthResponse.data
-        );
-        throw new Error(
-          "Booking routes work without auth - problem with authentication middleware"
-        );
-      } catch (noAuthError) {
-        console.error("Booking routes without auth also failed:", noAuthError);
-        throw new Error("Booking routes are not working at all");
-      }
-    }
-
-    // Test du middleware validateObjectId
-    try {
-      console.log("Testing validateObjectId middleware...");
-      const validateTestResponse = await api.get(
-        `/bookings/test-validate/${id}`,
-        { timeout: 5000 }
-      );
-      console.log(
-        "validateObjectId middleware test successful:",
-        validateTestResponse.data
-      );
-    } catch (validateTestError) {
-      console.error(
-        "validateObjectId middleware test failed:",
-        validateTestError
-      );
-      throw new Error("validateObjectId middleware is not working");
+      throw new Error("Booking routes are not working");
     }
 
     try {

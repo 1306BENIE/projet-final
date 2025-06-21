@@ -8,3 +8,5 @@ export declare const getCancellationEligibility: (req: Request, res: Response) =
 export declare const cancelBooking: (req: Request, res: Response) => Promise<Response<any, Record<string, any>>>;
 export declare const updateBooking: (req: Request, res: Response) => Promise<Response<any, Record<string, any>>>;
 export declare const getBookedDates: (req: Request, res: Response) => Promise<Response<any, Record<string, any>>>;
+export declare const confirmBooking: (req: Request, res: Response) => Promise<Response<any, Record<string, any>>>;
+export declare const rejectBooking: (req: Request, res: Response) => Promise<Response<any, Record<string, any>>>;

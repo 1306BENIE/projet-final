@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/store/useAuth";
 import { Booking, BookingStatus } from "@/interfaces/booking/booking.interface";
 import { Tool } from "@/interfaces/tools/tool";
-import { BookingCard } from "@/components/booking/BookingCard";
-import { BookingDetailsModal } from "@/components/booking/BookingDetailsModal";
-import { CancelBookingModal } from "@/components/booking/CancelBookingModal";
+import { BookingCard } from "@/components/features/booking/BookingCard";
+import { BookingDetailsModal } from "@/components/features/booking/BookingDetailsModal";
+import { CancelBookingModal } from "@/components/features/booking/CancelBookingModal";
 import { Pagination } from "@/components/ui/Pagination";
 import { usePagination } from "@/hooks/usePagination";
 import {
@@ -25,6 +25,7 @@ import { bookingService } from "@/services/bookingService";
 import { toolService } from "@/services/toolService";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { BookingCardSkeleton } from "@/components/features/booking/BookingCardSkeleton";
 
 type SortField = "date" | "price" | "status";
 type SortOrder = "asc" | "desc";
@@ -70,9 +71,7 @@ export default function BookingsPage() {
     booking: Booking;
     tool: Tool;
   } | null>(null);
-
-  // Ref pour éviter les appels API répétés en mode développement
-  const isLoadingRef = useRef(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Pagination - destructurer les valeurs pour éviter les re-rendus infinis
   const { page, limit, totalPages, setTotal, goToPage } = usePagination({
@@ -100,30 +99,21 @@ export default function BookingsPage() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
 
-  // Load bookings with pagination - utiliser les valeurs destructurées comme dépendances
+  // Load bookings with pagination
   const loadBookings = useCallback(async () => {
-    if (user && !isLoadingRef.current) {
-      isLoadingRef.current = true;
+    if (user) {
+      setIsLoading(true);
       try {
-        console.log("Loading bookings for user:", user);
         const response = await bookingService.getBookings(page, limit);
-        console.log("Received bookings response:", response);
-
         setBookings(response.bookings);
         setTotal(response.pagination.total);
 
         // Fetch tools for each booking
         const toolMap: Record<string, Tool> = {};
         for (const booking of response.bookings) {
-          if (!booking.toolId) {
-            console.error("Booking without toolId:", booking);
-            continue;
-          }
-
+          if (!booking.toolId) continue;
           try {
-            console.log("Fetching tool:", booking.toolId);
             const tool = await toolService.getToolById(booking.toolId);
-            console.log("Received tool:", tool);
             toolMap[booking.toolId] = tool;
           } catch (error) {
             console.error(`Error fetching tool ${booking.toolId}:`, error);
@@ -155,7 +145,6 @@ export default function BookingsPage() {
             };
           }
         }
-        console.log("Final toolMap:", toolMap);
         setTools(toolMap);
       } catch (error) {
         console.error("Error loading bookings:", error);
@@ -163,13 +152,12 @@ export default function BookingsPage() {
           "Une erreur est survenue lors du chargement des réservations"
         );
       } finally {
-        isLoadingRef.current = false;
+        setIsLoading(false);
       }
     }
   }, [user, page, limit, setTotal]);
 
   useEffect(() => {
-    console.log("BookingsPage mounted, loading bookings...");
     loadBookings();
   }, [loadBookings]);
 
@@ -624,7 +612,11 @@ export default function BookingsPage() {
           className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100"
         >
           <div className="space-y-6">
-            {sortedBookings.length === 0 ? (
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, index) => (
+                <BookingCardSkeleton key={index} />
+              ))
+            ) : sortedBookings.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-gray-400 mb-4">
                   <Calendar className="w-16 h-16 mx-auto" />

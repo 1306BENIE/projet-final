@@ -3,6 +3,7 @@ import { Booking } from "../models/Booking";
 import { Tool } from "../models/Tool";
 import { Types } from "mongoose";
 import { logger } from "../utils/logger";
+import { Notification } from "../models/Notification";
 
 // Centralized error handler
 const handleError = (error: any, res: Response) => {
@@ -95,10 +96,8 @@ export const getAllBookings = async (req: Request, res: Response) => {
 
     const userObjectId = new Types.ObjectId(userId);
 
-    // Get bookings where user is either renter or owner
-    const bookings = await Booking.find({
-      $or: [{ renter: userObjectId }, { owner: userObjectId }],
-    })
+    // Only show bookings where user is renter (not owner)
+    const bookings = await Booking.find({ renter: userObjectId })
       .populate("tool")
       .populate("renter", "firstName lastName email")
       .populate("owner", "firstName lastName email")
@@ -106,9 +105,7 @@ export const getAllBookings = async (req: Request, res: Response) => {
       .skip((page - 1) * limit)
       .limit(limit);
 
-    const total = await Booking.countDocuments({
-      $or: [{ renter: userObjectId }, { owner: userObjectId }],
-    });
+    const total = await Booking.countDocuments({ renter: userObjectId });
 
     res.json({
       bookings,
@@ -177,22 +174,118 @@ export const getOwnerBookings = async (req: Request, res: Response) => {
 
     const userObjectId = new Types.ObjectId(userId);
 
+    // Récupérer les réservations avec toutes les données nécessaires
     const bookings = await Booking.find({ owner: userObjectId })
-      .populate("tool")
-      .populate("renter", "firstName lastName email")
+      .populate("tool", "name images description category")
+      .populate("renter", "firstName lastName email phone")
+      .populate("owner", "firstName lastName email")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
 
     const total = await Booking.countDocuments({ owner: userObjectId });
 
+    // Transformer les données pour le frontend
+    const transformedBookings = bookings.map((booking) => {
+      // Extraire les informations de l'outil
+      const toolData =
+        typeof booking.tool === "object" && booking.tool !== null
+          ? {
+              id:
+                (booking.tool as any)._id?.toString() ||
+                booking.tool.toString(),
+              name: (booking.tool as any).name || "Outil inconnu",
+              image: (booking.tool as any).images?.[0] || "",
+              description: (booking.tool as any).description || "",
+              category: (booking.tool as any).category || "",
+            }
+          : {
+              id: booking.tool.toString(),
+              name: "Outil inconnu",
+              image: "",
+              description: "",
+              category: "",
+            };
+
+      // Extraire les informations du locataire
+      const renterData =
+        typeof booking.renter === "object" && booking.renter !== null
+          ? {
+              id:
+                (booking.renter as any)._id?.toString() ||
+                booking.renter.toString(),
+              firstName: (booking.renter as any).firstName || "",
+              lastName: (booking.renter as any).lastName || "",
+              email: (booking.renter as any).email || "",
+              phone: (booking.renter as any).phone || "",
+              fullName:
+                `${(booking.renter as any).firstName || ""} ${
+                  (booking.renter as any).lastName || ""
+                }`.trim() || "Utilisateur inconnu",
+            }
+          : {
+              id: booking.renter.toString(),
+              firstName: "",
+              lastName: "",
+              email: "",
+              phone: "",
+              fullName: "Utilisateur inconnu",
+            };
+
+      // Extraire les informations du propriétaire
+      const ownerData =
+        typeof booking.owner === "object" && booking.owner !== null
+          ? {
+              id:
+                (booking.owner as any)._id?.toString() ||
+                booking.owner.toString(),
+              firstName: (booking.owner as any).firstName || "",
+              lastName: (booking.owner as any).lastName || "",
+              email: (booking.owner as any).email || "",
+              fullName:
+                `${(booking.owner as any).firstName || ""} ${
+                  (booking.owner as any).lastName || ""
+                }`.trim() || "Propriétaire inconnu",
+            }
+          : {
+              id: booking.owner.toString(),
+              firstName: "",
+              lastName: "",
+              email: "",
+              fullName: "Propriétaire inconnu",
+            };
+
+      return {
+        id: booking._id.toString(),
+        tool: toolData,
+        renter: renterData,
+        owner: ownerData,
+        startDate: booking.startDate.toISOString(),
+        endDate: booking.endDate.toISOString(),
+        status: booking.status,
+        paymentStatus: booking.paymentStatus || "pending",
+        totalPrice: booking.totalPrice,
+        depositAmount: booking.depositAmount || 0,
+        message: booking.message || "",
+        createdAt: booking.createdAt.toISOString(),
+        updatedAt: booking.updatedAt.toISOString(),
+        cancelledAt: booking.cancelledAt?.toISOString() || null,
+        cancelledBy: booking.cancelledBy?.toString() || null,
+        cancellationReason: booking.cancellationReason || null,
+        cancellationFee: booking.cancellationFee || 0,
+        refundAmount: booking.refundAmount || 0,
+      };
+    });
+
     res.json({
-      bookings,
+      bookings: transformedBookings,
       metadata: {
         total,
         page,
         limit,
         pages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1,
       },
     });
   } catch (error) {
@@ -576,21 +669,210 @@ export const updateBooking = async (req: Request, res: Response) => {
 export const getBookedDates = async (req: Request, res: Response) => {
   try {
     const { toolId } = req.params;
-    if (!Types.ObjectId.isValid(toolId)) {
+    const { startDate, endDate } = req.query;
+
+    if (!toolId || !Types.ObjectId.isValid(toolId)) {
       return res.status(400).json({ message: "Invalid tool ID" });
     }
 
-    const toolObjectId = new Types.ObjectId(toolId);
-
-    const bookings = await Booking.find({
-      tool: toolObjectId,
+    const query: any = {
+      tool: new Types.ObjectId(toolId),
       status: { $in: ["pending", "approved", "active"] },
-    }).select("startDate endDate -_id");
+    };
 
-    res.json(bookings);
+    if (startDate && endDate) {
+      query.$or = [
+        {
+          startDate: { $lte: new Date(endDate as string) },
+          endDate: { $gte: new Date(startDate as string) },
+        },
+      ];
+    }
+
+    const bookings = await Booking.find(query).select("startDate endDate");
+
+    const bookedDates = bookings.map((booking) => ({
+      startDate: booking.startDate,
+      endDate: booking.endDate,
+    }));
+
+    res.json({ bookedDates });
   } catch (error) {
-    res.status(500).json({
-      message: "Erreur serveur lors de la récupération des périodes réservées",
+    console.error("Error getting booked dates:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Confirmer une réservation (propriétaire)
+export const confirmBooking = async (req: Request, res: Response) => {
+  try {
+    const bookingId = req.params.id;
+    const userId = req.user?.userId;
+
+    if (!userId || !Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    if (!bookingId || !Types.ObjectId.isValid(bookingId)) {
+      return res.status(400).json({ message: "Invalid booking ID" });
+    }
+
+    const booking = await Booking.findById(bookingId)
+      .populate("tool", "name owner")
+      .populate("renter", "firstName lastName email");
+
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // Vérifier que l'utilisateur est bien le propriétaire de l'outil
+    if (booking.owner.toString() !== userId) {
+      return res
+        .status(403)
+        .json({ message: "You can only confirm bookings for your own tools" });
+    }
+
+    // Vérifier que la réservation est en attente
+    if (booking.status !== "pending") {
+      return res.status(400).json({
+        message: `Cannot confirm booking with status: ${booking.status}`,
+      });
+    }
+
+    // Vérifier qu'il n'y a pas de conflit de dates
+    const conflictingBookings = await Booking.find({
+      tool: booking.tool,
+      _id: { $ne: bookingId },
+      status: { $in: ["pending", "approved", "active"] },
+      $or: [
+        {
+          startDate: { $lte: booking.endDate },
+          endDate: { $gte: booking.startDate },
+        },
+      ],
     });
+
+    if (conflictingBookings.length > 0) {
+      return res.status(409).json({
+        message: "Date conflict: Another booking exists for these dates",
+        conflicts: conflictingBookings.map((b) => ({
+          id: b._id,
+          startDate: b.startDate,
+          endDate: b.endDate,
+          status: b.status,
+        })),
+      });
+    }
+
+    // Confirmer la réservation
+    booking.status = "approved";
+    booking.updatedAt = new Date();
+    await booking.save();
+
+    // Envoyer une notification au locataire
+    try {
+      const toolName =
+        typeof booking.tool === "object" && booking.tool !== null
+          ? (booking.tool as any).name
+          : "Tool";
+      await Notification.create({
+        user: booking.renter,
+        type: "rental_accepted",
+        title: "Réservation confirmée",
+        message: `Votre réservation pour ${toolName} a été confirmée`,
+        relatedBooking: booking._id,
+      });
+    } catch (notificationError) {
+      console.error("Error creating notification:", notificationError);
+      // Ne pas faire échouer la confirmation pour une erreur de notification
+    }
+
+    res.json({
+      message: "Booking confirmed successfully",
+      booking: {
+        id: booking._id,
+        status: booking.status,
+        updatedAt: booking.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Error confirming booking:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Rejeter une réservation (propriétaire)
+export const rejectBooking = async (req: Request, res: Response) => {
+  try {
+    const bookingId = req.params.id;
+    const userId = req.user?.userId;
+    const { reason } = req.body;
+
+    if (!userId || !Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    if (!bookingId || !Types.ObjectId.isValid(bookingId)) {
+      return res.status(400).json({ message: "Invalid booking ID" });
+    }
+
+    const booking = await Booking.findById(bookingId)
+      .populate("tool", "name owner")
+      .populate("renter", "firstName lastName email");
+
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // Vérifier que l'utilisateur est bien le propriétaire de l'outil
+    if (booking.owner.toString() !== userId) {
+      return res
+        .status(403)
+        .json({ message: "You can only reject bookings for your own tools" });
+    }
+
+    // Vérifier que la réservation est en attente
+    if (booking.status !== "pending") {
+      return res.status(400).json({
+        message: `Cannot reject booking with status: ${booking.status}`,
+      });
+    }
+
+    // Rejeter la réservation
+    booking.status = "rejected";
+    booking.updatedAt = new Date();
+    await booking.save();
+
+    // Envoyer une notification au locataire
+    try {
+      const toolName =
+        typeof booking.tool === "object" && booking.tool !== null
+          ? (booking.tool as any).name
+          : "Tool";
+      await Notification.create({
+        user: booking.renter,
+        type: "rental_rejected",
+        title: "Réservation rejetée",
+        message: `Votre réservation pour ${toolName} a été rejetée${
+          reason ? `: ${reason}` : ""
+        }`,
+        relatedBooking: booking._id,
+      });
+    } catch (notificationError) {
+      console.error("Error creating notification:", notificationError);
+      // Ne pas faire échouer le rejet pour une erreur de notification
+    }
+
+    res.json({
+      message: "Booking rejected successfully",
+      booking: {
+        id: booking._id,
+        status: booking.status,
+        updatedAt: booking.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Error rejecting booking:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
