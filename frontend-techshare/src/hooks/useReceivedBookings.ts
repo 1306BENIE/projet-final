@@ -6,132 +6,106 @@ import { ReceivedBooking } from "@/interfaces/booking/received-booking.interface
 export const useReceivedBookings = () => {
   const [bookings, setBookings] = useState<ReceivedBooking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Charger les réservations
+  // --- Modal State ---
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] =
+    useState<ReceivedBooking | null>(null);
+
+  const handleOpenModal = (booking: ReceivedBooking) => {
+    setSelectedBooking(booking);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedBooking(null);
+  };
+  // -------------------
+
   const fetchReceivedBookings = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      console.log("Starting to fetch received bookings...");
       const receivedBookings = await bookingService.getReceivedBookings();
-      console.log("Received bookings:", receivedBookings);
       setBookings(receivedBookings);
-    } catch (error) {
-      console.error("Error in fetchReceivedBookings:", error);
-      toast.error("Erreur lors du chargement des réservations reçues");
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Une erreur est survenue.";
+      setError(errorMessage);
+      toast.error(`Erreur: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Confirmer une réservation
-  const handleConfirmBooking = useCallback(
-    async (bookingId: string) => {
-      if (actionLoading) return;
+  const handleAction = async (
+    bookingId: string,
+    action: (id: string) => Promise<unknown>,
+    successMessage: string,
+    optimisticStatus?: "approved" | "rejected" | "completed"
+  ) => {
+    if (actionLoading) return;
+    setActionLoading(bookingId);
 
-      setActionLoading(bookingId);
-      try {
-        // Optimistic update
-        setBookings((prev) =>
-          prev.map((booking) =>
-            booking.id === bookingId
-              ? { ...booking, status: "approved" }
-              : booking
-          )
-        );
+    const previousBookings = bookings;
 
-        await bookingService.confirmBooking(bookingId);
-        toast.success("Réservation confirmée avec succès");
+    if (optimisticStatus) {
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === bookingId ? { ...b, status: optimisticStatus } : b
+        )
+      );
+    }
 
-        // Rafraîchir les données
-        const updatedBookings = await bookingService.getReceivedBookings();
-        setBookings(updatedBookings);
-      } catch (error) {
-        console.error("Error confirming booking:", error);
-        toast.error("Erreur lors de la confirmation");
-
-        // Revert optimistic update
-        const originalBookings = await bookingService.getReceivedBookings();
-        setBookings(originalBookings);
-      } finally {
-        setActionLoading(null);
+    try {
+      await action(bookingId);
+      toast.success(successMessage);
+      if (isModalOpen) {
+        handleCloseModal();
       }
-    },
-    [actionLoading]
-  );
+      await fetchReceivedBookings(); // Refresh data
+    } catch (err) {
+      setBookings(previousBookings); // Revert optimistic update
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Une erreur est survenue lors de l'action.";
+      toast.error(errorMessage);
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
-  // Rejeter une réservation
-  const handleRejectBooking = useCallback(
-    async (bookingId: string) => {
-      if (actionLoading) return;
+  const handleConfirm = (bookingId: string) => {
+    handleAction(
+      bookingId,
+      bookingService.confirmBooking,
+      "Réservation confirmée avec succès",
+      "approved"
+    );
+  };
 
-      setActionLoading(bookingId);
-      try {
-        // Optimistic update
-        setBookings((prev) =>
-          prev.map((booking) =>
-            booking.id === bookingId
-              ? { ...booking, status: "rejected" }
-              : booking
-          )
-        );
+  const handleReject = (bookingId: string) => {
+    handleAction(
+      bookingId,
+      bookingService.rejectBooking,
+      "Réservation rejetée",
+      "rejected"
+    );
+  };
 
-        await bookingService.rejectBooking(bookingId);
-        toast.success("Réservation rejetée avec succès");
+  const handleComplete = (bookingId: string) => {
+    handleAction(
+      bookingId,
+      bookingService.completeBooking,
+      "Réservation marquée comme terminée",
+      "completed"
+    );
+  };
 
-        // Rafraîchir les données
-        const updatedBookings = await bookingService.getReceivedBookings();
-        setBookings(updatedBookings);
-      } catch (error) {
-        console.error("Error rejecting booking:", error);
-        toast.error("Erreur lors du rejet");
-
-        // Revert optimistic update
-        const originalBookings = await bookingService.getReceivedBookings();
-        setBookings(originalBookings);
-      } finally {
-        setActionLoading(null);
-      }
-    },
-    [actionLoading]
-  );
-
-  // Marquer comme terminé
-  const handleCompleteBooking = useCallback(
-    async (bookingId: string) => {
-      if (actionLoading) return;
-
-      setActionLoading(bookingId);
-      try {
-        // Optimistic update
-        setBookings((prev) =>
-          prev.map((booking) =>
-            booking.id === bookingId
-              ? { ...booking, status: "completed" }
-              : booking
-          )
-        );
-
-        await bookingService.completeBooking(bookingId);
-        toast.success("Réservation marquée comme terminée");
-
-        // Rafraîchir les données
-        const updatedBookings = await bookingService.getReceivedBookings();
-        setBookings(updatedBookings);
-      } catch (error) {
-        console.error("Error completing booking:", error);
-        toast.error("Erreur lors de la mise à jour");
-
-        // Revert optimistic update
-        const originalBookings = await bookingService.getReceivedBookings();
-        setBookings(originalBookings);
-      } finally {
-        setActionLoading(null);
-      }
-    },
-    [actionLoading]
-  );
-
-  // Charger les données au montage
   useEffect(() => {
     fetchReceivedBookings();
   }, [fetchReceivedBookings]);
@@ -139,10 +113,15 @@ export const useReceivedBookings = () => {
   return {
     bookings,
     loading,
+    error,
     actionLoading,
-    handleConfirmBooking,
-    handleRejectBooking,
-    handleCompleteBooking,
+    selectedBooking,
+    isModalOpen,
+    handleOpenModal,
+    handleCloseModal,
+    handleConfirm,
+    handleReject,
+    handleComplete,
     refetch: fetchReceivedBookings,
   };
 };

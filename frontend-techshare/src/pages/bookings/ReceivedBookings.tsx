@@ -1,33 +1,59 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Inbox, Loader2 } from "lucide-react";
+import { Inbox } from "lucide-react";
 import { useReceivedBookings } from "@/hooks/useReceivedBookings";
 import { ReceivedBookingsList } from "@/components/features/booking/ReceivedBookingsList";
 import { ReceivedBookingModal } from "@/components/features/booking/ReceivedBookingModal";
 import { ReceivedBooking } from "@/interfaces/booking/received-booking.interface";
+import { ReceivedBookingsSkeleton } from "@/components/features/booking/ReceivedBookingsSkeleton";
 
 export default function ReceivedBookings() {
   const {
     bookings,
     loading,
     actionLoading,
-    handleConfirmBooking,
-    handleRejectBooking,
-    handleCompleteBooking,
+    handleConfirm,
+    handleReject,
+    handleComplete,
   } = useReceivedBookings();
 
   const [selectedBooking, setSelectedBooking] =
     useState<ReceivedBooking | null>(null);
 
-  // Loading state
+  // Loading state with skeleton
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-blue-100 to-blue-200">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-blue-800 text-lg">
-            Chargement des réservations...
-          </p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-blue-200 py-8">
+        <div className="container mx-auto px-10 max-w-8xl">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, type: "spring" }}
+            className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+          >
+            <div className="flex items-center gap-4">
+              <Inbox className="w-10 h-10 text-blue-600 bg-white rounded-full shadow p-2 animate-fade-in" />
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold text-blue-900">
+                  Réservations reçues
+                </h1>
+                <p className="text-blue-700 mt-1 text-lg">
+                  Gérez les demandes de réservation sur vos outils en toute
+                  simplicité
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Skeleton */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <ReceivedBookingsSkeleton />
+          </motion.div>
         </div>
       </div>
     );
@@ -87,9 +113,9 @@ export default function ReceivedBookings() {
           <ReceivedBookingsList
             bookings={bookings}
             actionLoading={actionLoading}
-            onConfirm={handleConfirmBooking}
-            onReject={handleRejectBooking}
-            onComplete={handleCompleteBooking}
+            onConfirm={handleConfirm}
+            onReject={handleReject}
+            onComplete={handleComplete}
             onViewDetails={setSelectedBooking}
           />
         </motion.div>

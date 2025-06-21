@@ -19,7 +19,6 @@ import AddTool from "@/pages/tools/AddTool";
 import EditTool from "@/pages/tools/EditTool";
 import BookingsPage from "@/pages/bookings/BookingsPage";
 import MyListings from "@/pages/listing/MyListings";
-import BookingDetail from "@/pages/bookings/BookingDetail";
 import BookTool from "@/pages/tools/BookTool";
 import { TestPage } from "@/pages/TestPage";
 import { Toaster } from "react-hot-toast";
@@ -84,7 +83,6 @@ export default function App() {
               <Route path="/tools/:id/edit" element={<EditTool />} />
               <Route path="/tools/:id/book" element={<BookTool />} />
               <Route path="/bookings" element={<BookingsPage />} />
-              <Route path="/bookings/:id" element={<BookingDetail />} />
               <Route path="/my-listings" element={<MyListings />} />
               <Route path="/my-bookings" element={<BookingsPage />} />
               <Route path="/received-bookings" element={<ReceivedBookings />} />
