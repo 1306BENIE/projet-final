@@ -56,7 +56,7 @@ export default function ReceivedBookings() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-blue-200 py-8">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-10 max-w-8xl">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}

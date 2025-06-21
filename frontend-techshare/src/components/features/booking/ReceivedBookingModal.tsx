@@ -166,7 +166,7 @@ export const ReceivedBookingModal = ({
                 <ReceivedBookingStatus
                   status={booking.status}
                   paymentStatus={booking.paymentStatus}
-                  showPaymentStatus={true}
+                  type="payment"
                 />
               </div>
 
