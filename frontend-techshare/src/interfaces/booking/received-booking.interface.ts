@@ -13,6 +13,7 @@ export interface ReceivedBookingUser {
   email: string;
   phone?: string;
   fullName: string;
+  createdAt: string;
 }
 
 export interface ReceivedBookingOwner {

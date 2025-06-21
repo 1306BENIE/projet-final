@@ -177,7 +177,7 @@ export const getOwnerBookings = async (req: Request, res: Response) => {
     // Récupérer les réservations avec toutes les données nécessaires
     const bookings = await Booking.find({ owner: userObjectId })
       .populate("tool", "name images description category")
-      .populate("renter", "firstName lastName email phone")
+      .populate("renter", "firstName lastName email phone createdAt")
       .populate("owner", "firstName lastName email")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -218,6 +218,8 @@ export const getOwnerBookings = async (req: Request, res: Response) => {
               lastName: (booking.renter as any).lastName || "",
               email: (booking.renter as any).email || "",
               phone: (booking.renter as any).phone || "",
+              createdAt:
+                (booking.renter as any).createdAt || new Date().toISOString(),
               fullName:
                 `${(booking.renter as any).firstName || ""} ${
                   (booking.renter as any).lastName || ""
@@ -229,6 +231,7 @@ export const getOwnerBookings = async (req: Request, res: Response) => {
               lastName: "",
               email: "",
               phone: "",
+              createdAt: new Date().toISOString(),
               fullName: "Utilisateur inconnu",
             };
 
