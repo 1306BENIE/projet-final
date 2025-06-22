@@ -29,36 +29,28 @@ api.interceptors.request.use(
 // Intercepteur pour gérer les erreurs
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
+  (error) => {
     console.error("Erreur API:", error.response?.status, error.response?.data);
     const originalRequest = error.config;
 
-    // Si l'erreur est 401 (non autorisé) et que nous n'avons pas déjà essayé de rafraîchir le token
+    // Si l'erreur est 401 (non autorisé)
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      try {
-        // Tentative de rafraîchir le token
-        const refreshToken = localStorage.getItem("refreshToken");
-        if (refreshToken) {
-          const response = await api.post("/auth/refresh", { refreshToken });
-          const { token } = response.data;
+      // On déconnecte l'utilisateur et on le redirige
+      // C'est la solution la plus simple et sécurisée pour gérer les tokens invalides/expirés
+      // qui ne sont pas gérés par un système de refresh token complexe.
+      localStorage.removeItem("token");
+      // Si vous utilisez un refresh token, supprimez-le aussi
+      // localStorage.removeItem("refreshToken");
 
-          // Mise à jour du token
-          localStorage.setItem("token", token);
+      // Dispatch un événement pour que l'app puisse réagir (par exemple, AuthContext)
+      window.dispatchEvent(new Event("auth-error"));
 
-          // Mise à jour de l'en-tête de la requête originale
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-
-          // Réessayer la requête originale
-          return api(originalRequest);
-        }
-      } catch (error) {
-        // Si le rafraîchissement échoue, déconnecter l'utilisateur
-        console.error("Erreur lors du rafraîchissement du token:", error);
-        localStorage.removeItem("token");
-        localStorage.removeItem("refreshToken");
-        window.location.href = "/login";
+      // On redirige vers la page de connexion
+      // Utiliser window.location.href assure une redirection complète qui nettoie l'état de l'app.
+      if (window.location.pathname !== "/auth/login") {
+        window.location.href = "/auth/login";
       }
     }
 
