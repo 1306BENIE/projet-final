@@ -12,7 +12,7 @@ export default function PrivateLayout() {
       location.pathname.includes("/edit"));
 
   return (
-    <div className="min-h-screen flex flex-col bg-light">
+    <div className="min-h-screen flex flex-col bg-light overflow-x-hidden">
       {!hideHeader && <Navbar />}
       <main className="flex-1">
         <Outlet />

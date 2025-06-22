@@ -39,7 +39,10 @@ export interface BookedDatesResponse {
   bookedDates: {
     startDate: string;
     endDate: string;
+    status: string;
   }[];
+  totalActiveBookings: number;
+  currentDate: string;
 }
 
 // Fonction utilitaire pour valider une réservation

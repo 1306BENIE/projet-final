@@ -162,16 +162,36 @@ bookingSchema.statics.checkAvailability = async function (
   startDate: Date,
   endDate: Date
 ): Promise<boolean> {
-  const overlappingBooking = await this.findOne({
+  const currentDate = new Date(); // Directement en UTC
+
+  const query = {
     tool: toolId,
     status: { $in: ["pending", "approved", "active"] },
+    endDate: { $gte: currentDate },
     $or: [
       {
         startDate: { $lte: endDate },
         endDate: { $gte: startDate },
       },
     ],
+  };
+
+  logger.info({
+    message: "[checkAvailability] Executing query",
+    query: JSON.stringify(query),
   });
+
+  const overlappingBooking = await this.findOne(query);
+
+  if (overlappingBooking) {
+    logger.warn({
+      message: "[checkAvailability] Found overlapping booking",
+      bookingId: overlappingBooking._id,
+    });
+  } else {
+    logger.info("[checkAvailability] No overlapping booking found.");
+  }
+
   return !overlappingBooking;
 };
 

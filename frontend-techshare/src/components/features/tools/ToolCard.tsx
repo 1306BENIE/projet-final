@@ -14,6 +14,7 @@ import { Tool } from "@/interfaces/tools/tool";
 import { useAuth } from "@/store/useAuth";
 import { toast } from "react-hot-toast";
 import { BookingModal } from "@/components/features/booking/BookingModal";
+import { useBookingModal } from "@/hooks/useBookingModal";
 
 const shimmer =
   "before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent";
@@ -34,11 +35,18 @@ export default function ToolCard({
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const {
+    isModalOpen,
+    isPreLoading,
+    bookedPeriods,
+    openModal,
+    closeModal,
+    error,
+  } = useBookingModal();
 
-  const handleReserve = (e: React.MouseEvent) => {
+  const handleReserve = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!user) {
@@ -46,7 +54,13 @@ export default function ToolCard({
       navigate("/login");
       return;
     }
-    setIsBookingModalOpen(true);
+
+    // Afficher un toast de loading pendant le pre-loading
+    if (isPreLoading) {
+      toast.loading("Chargement des données de disponibilité...");
+    }
+
+    await openModal(tool);
   };
 
   const handleDelete = async () => {
@@ -319,14 +333,22 @@ export default function ToolCard({
 
       {/* Modal de réservation */}
       <AnimatePresence>
-        {isBookingModalOpen && (
+        {isModalOpen && (
           <BookingModal
-            isOpen={isBookingModalOpen}
-            onClose={() => setIsBookingModalOpen(false)}
+            isOpen={isModalOpen}
+            onClose={closeModal}
             tool={tool}
+            bookedPeriods={bookedPeriods}
           />
         )}
       </AnimatePresence>
+
+      {/* Affichage des erreurs */}
+      {error && (
+        <div className="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50">
+          {error}
+        </div>
+      )}
     </>
   );
 }

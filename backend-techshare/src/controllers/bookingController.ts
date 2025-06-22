@@ -5,16 +5,8 @@ import { Types } from "mongoose";
 import { logger } from "../utils/logger";
 import { Notification } from "../models/Notification";
 
-// Centralized error handler
-const handleError = (error: any, res: Response) => {
-  logger.error("Booking controller error:", error);
-  res.status(error.status || 500).json({
-    message: error.message || "Internal server error",
-  });
-};
-
 // Create a new booking
-export const createBooking = async (req: Request, res: Response) => {
+export const createBooking = async (req: Request, res: Response, next) => {
   try {
     const { toolId, startDate, endDate, message } = req.body;
     const userId = req.user?.userId;
@@ -30,6 +22,10 @@ export const createBooking = async (req: Request, res: Response) => {
     const userObjectId = new Types.ObjectId(userId);
     const toolObjectId = new Types.ObjectId(toolId);
 
+    // Les chaînes ISO sont déjà en UTC, new Date les interprète correctement.
+    const startUTC = new Date(startDate);
+    const endUTC = new Date(endDate);
+
     // Check if tool exists and is available
     const tool = await Tool.findById(toolObjectId);
     if (!tool) {
@@ -39,8 +35,8 @@ export const createBooking = async (req: Request, res: Response) => {
     // Check if dates are available
     const isAvailable = await Booking.checkAvailability(
       toolObjectId,
-      new Date(startDate),
-      new Date(endDate)
+      startUTC,
+      endUTC
     );
 
     if (!isAvailable) {
@@ -52,8 +48,8 @@ export const createBooking = async (req: Request, res: Response) => {
     // Calculate total price
     const totalPrice = await Booking.calculateTotalPrice(
       toolObjectId,
-      new Date(startDate),
-      new Date(endDate)
+      startUTC,
+      endUTC
     );
 
     // Create booking
@@ -61,8 +57,8 @@ export const createBooking = async (req: Request, res: Response) => {
       tool: toolObjectId,
       renter: userObjectId,
       owner: tool.owner,
-      startDate,
-      endDate,
+      startDate: startUTC,
+      endDate: endUTC,
       totalPrice,
       depositAmount: tool.caution || 0,
       message,
@@ -78,9 +74,8 @@ export const createBooking = async (req: Request, res: Response) => {
       booking,
     });
   } catch (error) {
-    handleError(error, res);
+    next(error);
   }
-  return;
 };
 
 // Get all bookings (with pagination)
@@ -119,9 +114,8 @@ export const getAllBookings = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    handleError(error, res);
+    res.status(500).json({ message: "Internal server error" });
   }
-  return;
 };
 
 // Get user's bookings
@@ -156,9 +150,8 @@ export const getUserBookings = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    handleError(error, res);
+    res.status(500).json({ message: "Internal server error" });
   }
-  return;
 };
 
 // Get owner's bookings
@@ -292,9 +285,8 @@ export const getOwnerBookings = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    handleError(error, res);
+    res.status(500).json({ message: "Internal server error" });
   }
-  return;
 };
 
 // Get booking by ID
@@ -350,9 +342,8 @@ export const getBookingById = async (req: Request, res: Response) => {
 
     res.json(booking);
   } catch (error) {
-    handleError(error, res);
+    res.status(500).json({ message: "Internal server error" });
   }
-  return;
 };
 
 // Get cancellation eligibility for a booking
@@ -440,9 +431,8 @@ export const getCancellationEligibility = async (
     res.json(response);
   } catch (error) {
     console.error("Error in getCancellationEligibility:", error);
-    handleError(error, res);
+    res.status(500).json({ message: "Internal server error" });
   }
-  return;
 };
 
 // Cancel booking
@@ -541,9 +531,8 @@ export const cancelBooking = async (req: Request, res: Response) => {
       cancellationInfo,
     });
   } catch (error) {
-    handleError(error, res);
+    res.status(500).json({ message: "Internal server error" });
   }
-  return;
 };
 
 // Helper function to calculate cancellation eligibility and fees
@@ -663,46 +652,53 @@ export const updateBooking = async (req: Request, res: Response) => {
       booking,
     });
   } catch (error) {
-    handleError(error, res);
+    res.status(500).json({ message: "Internal server error" });
   }
-  return;
 };
 
 // GET /api/tools/:toolId/booked-dates
-export const getBookedDates = async (req: Request, res: Response) => {
+export const getBookedDates = async (req: Request, res: Response, next) => {
   try {
     const { toolId } = req.params;
-    const { startDate, endDate } = req.query;
+    logger.info(`[getBookedDates] Start for toolId: ${toolId}`);
 
     if (!toolId || !Types.ObjectId.isValid(toolId)) {
+      logger.warn(`[getBookedDates] Invalid toolId: ${toolId}`);
       return res.status(400).json({ message: "Invalid tool ID" });
     }
 
-    const query: any = {
+    const currentDate = new Date(); // Directement en UTC
+
+    const query = {
       tool: new Types.ObjectId(toolId),
       status: { $in: ["pending", "approved", "active"] },
+      endDate: { $gte: currentDate },
     };
 
-    if (startDate && endDate) {
-      query.$or = [
-        {
-          startDate: { $lte: new Date(endDate as string) },
-          endDate: { $gte: new Date(startDate as string) },
-        },
-      ];
-    }
+    logger.info({
+      message: "[getBookedDates] Executing query",
+      query: JSON.stringify(query),
+    });
 
-    const bookings = await Booking.find(query).select("startDate endDate");
+    const bookings = await Booking.find(query)
+      .select("startDate endDate status")
+      .sort({ startDate: 1 });
+
+    logger.info(`[getBookedDates] Found ${bookings.length} bookings.`);
 
     const bookedDates = bookings.map((booking) => ({
       startDate: booking.startDate,
       endDate: booking.endDate,
+      status: booking.status,
     }));
 
-    res.json({ bookedDates });
+    res.json({
+      bookedDates,
+      totalActiveBookings: bookedDates.length,
+      currentDate: currentDate.toISOString(),
+    });
   } catch (error) {
-    console.error("Error getting booked dates:", error);
-    res.status(500).json({ message: "Internal server error" });
+    next(error);
   }
 };
 

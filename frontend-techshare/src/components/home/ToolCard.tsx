@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useAuth } from "@/store/useAuth";
 import { toast } from "react-hot-toast";
 import { BookingModal } from "@/components/features/booking/BookingModal";
+import { useBookingModal } from "@/hooks/useBookingModal";
 
 interface ToolCardProps {
   tool: Tool;
@@ -18,7 +19,8 @@ const shimmer =
 export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const { isModalOpen, openModal, closeModal, bookedPeriods } =
+    useBookingModal();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -27,10 +29,10 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
     e.stopPropagation();
     if (!user) {
       toast.error("Vous devez être connecté pour réserver un outil");
-      navigate("/login");
+      navigate("/auth/login");
       return;
     }
-    setIsBookingModalOpen(true);
+    openModal(tool);
   };
 
   return (
@@ -178,11 +180,12 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
       </Link>
 
       <AnimatePresence>
-        {isBookingModalOpen && (
+        {isModalOpen && (
           <BookingModal
-            isOpen={isBookingModalOpen}
-            onClose={() => setIsBookingModalOpen(false)}
+            isOpen={isModalOpen}
+            onClose={closeModal}
             tool={tool}
+            bookedPeriods={bookedPeriods}
           />
         )}
       </AnimatePresence>

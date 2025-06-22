@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { AxiosError } from "axios";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { format, differenceInDays, addDays, isAfter } from "date-fns";
 import { X, Calendar, Clock } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -10,9 +10,10 @@ import "react-datepicker/dist/react-datepicker.css";
 import { Button } from "@/components/ui/Button";
 import { Tool } from "@/interfaces/tools/tool";
 import { CreateBookingDto } from "@/interfaces/booking/dto.interface";
-import { bookingService, BookedDatesResponse } from "@/services/bookingService";
+import { bookingService } from "@/services/bookingService";
 import { ContractModal } from "@/components/features/booking/ContractModal";
 import { fr } from "date-fns/locale";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 
 registerLocale("fr", fr);
 
@@ -20,9 +21,11 @@ interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   tool: Tool;
+  bookedPeriods: { startDate: string; endDate: string }[];
 }
 
-// Fonction pour calculer le prochain créneau disponible
+// Fonction pour calculer le prochain créneau disponible (Ancienne version commentée)
+/*
 const calculateNextAvailableSlot = (
   bookedPeriods: { startDate: string; endDate: string }[]
 ): { startDate: Date; endDate: Date; message: string } | null => {
@@ -87,42 +90,118 @@ const calculateNextAvailableSlot = (
           )}`,
   };
 };
+*/
 
-export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
+// NOUVELLE FONCTION : Calcule le prochain créneau disponible avec une logique à 3 états
+const calculateNextAvailableSlot = (
+  bookedPeriods: { startDate: string; endDate: string }[]
+): { message: string } | null => {
+  // CAS 1: Totalement Disponible
+  if (!bookedPeriods || bookedPeriods.length === 0) {
+    return {
+      message: "Disponible dès aujourd'hui",
+    };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const sortedPeriods = [...bookedPeriods]
+    .map((p) => ({
+      start: new Date(p.startDate),
+      end: new Date(p.endDate),
+    }))
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
+
+  // Gérer les réservations qui commencent aujourd'hui ou dans le passé mais finissent dans le futur
+  const firstRelevantPeriod = sortedPeriods.find((p) => p.end >= today);
+  if (!firstRelevantPeriod) {
+    // Toutes les réservations sont passées
+    return { message: "Disponible dès aujourd'hui" };
+  }
+
+  // Si la première réservation pertinente est dans le futur, il y a un créneau avant.
+  if (isAfter(firstRelevantPeriod.start, today)) {
+    const endOfGap = addDays(firstRelevantPeriod.start, -1);
+    const duration = differenceInDays(endOfGap, today) + 1;
+    return {
+      message: `Prochain créneau : du ${format(
+        today,
+        "dd/MM/yyyy"
+      )} au ${format(endOfGap, "dd/MM/yyyy")} (${duration} jours)`,
+    };
+  }
+
+  // Parcourir les réservations pour trouver un créneau entre elles
+  for (let i = 0; i < sortedPeriods.length - 1; i++) {
+    const currentPeriodEnd = sortedPeriods[i].end;
+    const nextPeriodStart = sortedPeriods[i + 1].start;
+
+    // On ne considère que les créneaux futurs
+    if (currentPeriodEnd < today) continue;
+
+    const availableStart = addDays(currentPeriodEnd, 1);
+
+    if (isAfter(nextPeriodStart, availableStart)) {
+      const availableEnd = addDays(nextPeriodStart, -1);
+      const duration = differenceInDays(availableEnd, availableStart) + 1;
+      if (duration > 0) {
+        return {
+          message: `Prochain créneau : du ${format(
+            availableStart,
+            "dd/MM/yyyy"
+          )} au ${format(availableEnd, "dd/MM/yyyy")} (${duration} jours)`,
+        };
+      }
+    }
+  }
+
+  // CAS 2: Disponible à partir de (après la dernière réservation)
+  const lastPeriodEnd = sortedPeriods[sortedPeriods.length - 1].end;
+  const nextAvailableDate = addDays(lastPeriodEnd, 1);
+
+  return {
+    message: `Disponible à partir du ${format(
+      nextAvailableDate,
+      "dd/MM/yyyy"
+    )}`,
+  };
+};
+
+export const BookingModal = ({
+  isOpen,
+  onClose,
+  tool,
+  bookedPeriods,
+}: BookingModalProps) => {
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const [showContract, setShowContract] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [bookedPeriods, setBookedPeriods] = useState<
-    { startDate: string; endDate: string }[]
-  >([]);
   const navigate = useNavigate();
   const [dateError, setDateError] = useState<string | null>(null);
 
+  // Valeur par défaut pour éviter undefined
+  const safeBookedPeriods = bookedPeriods || [];
+
   const isFormValid = startDate && endDate && hasAcceptedTerms;
+  const controls = useAnimation();
 
   useEffect(() => {
-    if (isOpen && tool.id) {
-      bookingService
-        .getBookedDates(tool.id)
-        .then((data: BookedDatesResponse) => {
-          console.log("Périodes réservées reçues du backend :", data);
-          const periods = data.bookedDates;
-          setBookedPeriods(Array.isArray(periods) ? periods : []);
-        })
-        .catch((err) => {
-          console.error(
-            "Erreur lors de la récupération des périodes réservées :",
-            err
-          );
-          setBookedPeriods([]);
-        });
+    // Bloquer le scroll de l'arrière-plan quand la modale est ouverte
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
     } else {
-      setBookedPeriods([]);
+      document.body.style.overflow = "unset";
     }
-  }, [isOpen, tool.id]);
+
+    // Nettoyage au démontage du composant
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (startDate && endDate) {
@@ -135,6 +214,16 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
       setDateError(null);
     }
   }, [startDate, endDate]);
+
+  useEffect(() => {
+    if (isFormValid) {
+      // Animation "Pulse & Shine" quand le formulaire devient valide
+      controls.start({
+        scale: [1, 1.05, 1],
+        transition: { duration: 0.3 },
+      });
+    }
+  }, [isFormValid, controls]);
 
   if (!isOpen) return null;
 
@@ -183,7 +272,7 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
       }
 
       // Vérifier le chevauchement avec les périodes réservées
-      const isOverlapping = bookedPeriods.some(
+      const isOverlapping = safeBookedPeriods.some(
         (period) =>
           startDate &&
           endDate &&
@@ -232,8 +321,8 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
   };
 
   // Prépare les intervalles à désactiver pour le DatePicker
-  const excludeIntervals = Array.isArray(bookedPeriods)
-    ? bookedPeriods.map((period) => ({
+  const excludeIntervals = Array.isArray(safeBookedPeriods)
+    ? safeBookedPeriods.map((period) => ({
         start: new Date(period.startDate),
         end: new Date(period.endDate),
       }))
@@ -256,7 +345,7 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
             className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto overflow-hidden"
           >
             {/* En-tête */}
-            <div className="relative p-6 border-b border-gray-100">
+            <div className="relative p-4 border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 shadow-md">
@@ -290,113 +379,133 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
             </div>
 
             {/* Bloc d'alerte périodes réservées - design pro */}
-            {bookedPeriods.length > 0 && (
-              <div className="mb-6 flex items-start gap-3 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-xl shadow-sm">
+            {safeBookedPeriods.length > 0 && (
+              <div className="mb-4 flex items-start gap-3 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-xl shadow-sm">
                 <Clock className="w-6 h-6 text-blue-500 mt-0.5 flex-shrink-0" />
                 <div>
                   <div className="font-semibold text-blue-900 mb-1">
-                    {calculateNextAvailableSlot(bookedPeriods)?.message}
+                    {calculateNextAvailableSlot(safeBookedPeriods)?.message}
                   </div>
                   <p className="text-blue-700 text-sm">
-                    {bookedPeriods.length} réservation
-                    {bookedPeriods.length > 1 ? "s" : ""} active
-                    {bookedPeriods.length > 1 ? "s" : ""}
+                    {safeBookedPeriods.length} réservation
+                    {safeBookedPeriods.length > 1 ? "s" : ""} active
+                    {safeBookedPeriods.length > 1 ? "s" : ""} en cours
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Message quand aucune réservation active */}
+            {safeBookedPeriods.length === 0 && (
+              <div className="mb-4 flex items-start gap-3 p-4 bg-green-50 border-l-4 border-green-400 rounded-xl shadow-sm">
+                <Clock className="w-6 h-6 text-green-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <div className="font-semibold text-green-900 mb-1">
+                    Outil disponible
+                  </div>
+                  <p className="text-green-700 text-sm">
+                    Aucune réservation active - vous pouvez réserver dès
+                    maintenant
                   </p>
                 </div>
               </div>
             )}
 
             {/* Formulaire */}
-            <form onSubmit={handleSubmit} className="p-6">
-              <div className="space-y-6">
-                {/* Dates et Récapitulatif */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={handleSubmit} className="p-4">
+              <div className="space-y-4">
+                {/* Dates et Récapitulatif Unifiés */}
+                <div className="bg-gray-50 rounded-xl p-4">
                   {/* Dates */}
                   <div>
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-2 mb-2">
                       <Calendar className="w-5 h-5 text-blue-600" />
                       <h3 className="text-sm font-semibold text-gray-900">
-                        Dates de location
+                        Choisissez vos dates de location
                       </h3>
                     </div>
-                    <div className="space-y-3">
-                      <div className="bg-gray-50 rounded-md p-2">
-                        <DatePicker
-                          selected={startDate}
-                          onChange={(date: Date | null) => setStartDate(date)}
-                          minDate={new Date()}
-                          excludeDateIntervals={excludeIntervals}
-                          dateFormat="dd/MM/yyyy"
-                          placeholderText="Date de début"
-                          className="w-full border-gray-200 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 bg-gray-50"
-                          locale="fr"
-                        />
-                      </div>
-                      <div className="bg-gray-50 rounded-md p-2">
-                        <DatePicker
-                          selected={endDate}
-                          onChange={(date: Date | null) => setEndDate(date)}
-                          minDate={startDate || new Date()}
-                          excludeDateIntervals={excludeIntervals}
-                          dateFormat="dd/MM/yyyy"
-                          placeholderText="Date de fin"
-                          className="w-full border-gray-200 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 bg-gray-50"
-                          locale="fr"
-                        />
-                      </div>
-                      {dateError && (
-                        <div className="text-red-600 text-sm mt-1">
-                          {dateError}
-                        </div>
-                      )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <DatePicker
+                        selected={startDate}
+                        onChange={(date: Date | null) => setStartDate(date)}
+                        minDate={new Date()}
+                        excludeDateIntervals={excludeIntervals}
+                        dateFormat="dd/MM/yyyy"
+                        placeholderText="Date de début"
+                        className="w-full border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 py-2 px-3 bg-white"
+                        locale="fr"
+                      />
+                      <DatePicker
+                        selected={endDate}
+                        onChange={(date: Date | null) => setEndDate(date)}
+                        minDate={startDate || new Date()}
+                        excludeDateIntervals={excludeIntervals}
+                        dateFormat="dd/MM/yyyy"
+                        placeholderText="Date de fin"
+                        className="w-full border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300 py-2 px-3 bg-white"
+                        locale="fr"
+                      />
                     </div>
+                    {dateError && (
+                      <div className="text-red-600 text-sm mt-2">
+                        {dateError}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Récapitulatif */}
-                  {startDate && endDate && (
-                    <motion.div
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="bg-blue-50 rounded-xl p-4 border border-blue-100"
-                    >
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Durée</span>
-                          <span className="font-medium text-blue-700">
-                            {differenceInDays(
-                              new Date(endDate),
-                              new Date(startDate)
-                            )}{" "}
-                            jours
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Caution</span>
-                          <span className="font-medium text-blue-700">
-                            {tool.caution?.toLocaleString() || 0} FCFA
-                          </span>
-                        </div>
-                        <div className="border-t border-blue-200 pt-2 mt-2">
-                          <div className="flex justify-between font-semibold">
-                            <span>Total</span>
-                            <span className="text-blue-700">
-                              {(
-                                differenceInDays(
+                  {/* Récapitulatif (Apparition animée) */}
+                  <AnimatePresence>
+                    {startDate && endDate && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0, y: -10 }}
+                        animate={{ opacity: 1, height: "auto", y: 0 }}
+                        exit={{ opacity: 0, height: 0, y: -10 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="bg-white rounded-md p-4 border border-gray-300 mt-4 overflow-hidden"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Durée</span>
+                            <span className="font-medium text-blue-700">
+                              <AnimatedNumber
+                                value={differenceInDays(
                                   new Date(endDate),
                                   new Date(startDate)
-                                ) * tool.dailyPrice
-                              ).toLocaleString()}{" "}
-                              FCFA
+                                )}
+                              />{" "}
+                              jours
                             </span>
                           </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Caution</span>
+                            <span className="font-medium text-blue-700">
+                              {tool.caution?.toLocaleString() || 0} FCFA
+                            </span>
+                          </div>
+                          <div className="border-t-2 border-gray-200 pt-2 mt-2">
+                            <div className="flex justify-between font-bold text-base">
+                              <span>Total</span>
+                              <span className="text-blue-700">
+                                <AnimatedNumber
+                                  value={
+                                    differenceInDays(
+                                      new Date(endDate),
+                                      new Date(startDate)
+                                    ) * tool.dailyPrice
+                                  }
+                                  formatAsCurrency={true}
+                                />
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* Conditions de location */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
@@ -407,7 +516,7 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
                           onChange={(e) =>
                             setHasAcceptedTerms(e.target.checked)
                           }
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                           disabled={!startDate || !endDate}
                         />
                         <label
@@ -442,7 +551,7 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
                 )}
 
                 {/* Boutons d'action */}
-                <div className="flex justify-end gap-3 pt-2">
+                <div className="flex justify-end gap-3 pt-4">
                   <Button
                     type="button"
                     variant="outline"
@@ -456,6 +565,7 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
                     variant="primary"
                     isLoading={isLoading}
                     disabled={!isFormValid || isLoading}
+                    animate={controls}
                   >
                     {isLoading ? "Création..." : "Confirmer la réservation"}
                   </Button>
