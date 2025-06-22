@@ -1,23 +1,92 @@
 import { useState, useEffect } from "react";
 import { AxiosError } from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-import { format, differenceInDays } from "date-fns";
-import { X, Clock, Calendar, AlertCircle } from "lucide-react";
+import { format, differenceInDays, addDays, isAfter } from "date-fns";
+import { X, Calendar, Clock } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import DatePicker from "react-datepicker";
+import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Button } from "@/components/ui/Button";
 import { Tool } from "@/interfaces/tools/tool";
 import { CreateBookingDto } from "@/interfaces/booking/dto.interface";
-import { bookingService } from "@/services/bookingService";
+import { bookingService, BookedDatesResponse } from "@/services/bookingService";
 import { ContractModal } from "@/components/features/booking/ContractModal";
+import { fr } from "date-fns/locale";
+
+registerLocale("fr", fr);
 
 interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   tool: Tool;
 }
+
+// Fonction pour calculer le prochain créneau disponible
+const calculateNextAvailableSlot = (
+  bookedPeriods: { startDate: string; endDate: string }[]
+): { startDate: Date; endDate: Date; message: string } | null => {
+  if (bookedPeriods.length === 0) {
+    return {
+      startDate: new Date(),
+      endDate: addDays(new Date(), 30),
+      message: "Disponible dès aujourd'hui",
+    };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Trier les périodes réservées par date de début
+  const sortedPeriods = [...bookedPeriods].sort(
+    (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+  );
+
+  // Chercher le premier créneau disponible
+  let currentDate = today;
+
+  for (const period of sortedPeriods) {
+    const periodStart = new Date(period.startDate);
+    const periodEnd = new Date(period.endDate);
+
+    // Si il y a un gap entre la date actuelle et le début de cette période
+    if (isAfter(periodStart, addDays(currentDate, 1))) {
+      const availableEnd = addDays(periodStart, -1);
+      const duration = differenceInDays(availableEnd, currentDate);
+
+      return {
+        startDate: currentDate,
+        endDate: availableEnd,
+        message:
+          duration === 0
+            ? "Disponible dès aujourd'hui"
+            : `Disponible du ${format(currentDate, "dd/MM")} au ${format(
+                availableEnd,
+                "dd/MM"
+              )}`,
+      };
+    }
+
+    // Mettre à jour la date courante après cette période
+    currentDate = addDays(periodEnd, 1);
+  }
+
+  // Si on arrive ici, l'outil est disponible après la dernière période
+  const availableEnd = addDays(currentDate, 30);
+  const duration = differenceInDays(availableEnd, currentDate);
+
+  return {
+    startDate: currentDate,
+    endDate: availableEnd,
+    message:
+      duration === 0
+        ? "Disponible dès aujourd'hui"
+        : `Disponible du ${format(currentDate, "dd/MM")} au ${format(
+            availableEnd,
+            "dd/MM"
+          )}`,
+  };
+};
 
 export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -32,12 +101,24 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
   const navigate = useNavigate();
   const [dateError, setDateError] = useState<string | null>(null);
 
+  const isFormValid = startDate && endDate && hasAcceptedTerms;
+
   useEffect(() => {
     if (isOpen && tool.id) {
       bookingService
         .getBookedDates(tool.id)
-        .then(setBookedPeriods)
-        .catch(() => setBookedPeriods([]));
+        .then((data: BookedDatesResponse) => {
+          console.log("Périodes réservées reçues du backend :", data);
+          const periods = data.bookedDates;
+          setBookedPeriods(Array.isArray(periods) ? periods : []);
+        })
+        .catch((err) => {
+          console.error(
+            "Erreur lors de la récupération des périodes réservées :",
+            err
+          );
+          setBookedPeriods([]);
+        });
     } else {
       setBookedPeriods([]);
     }
@@ -151,251 +232,248 @@ export const BookingModal = ({ isOpen, onClose, tool }: BookingModalProps) => {
   };
 
   // Prépare les intervalles à désactiver pour le DatePicker
-  const excludeIntervals = bookedPeriods.map((period) => ({
-    start: new Date(period.startDate),
-    end: new Date(period.endDate),
-  }));
+  const excludeIntervals = Array.isArray(bookedPeriods)
+    ? bookedPeriods.map((period) => ({
+        start: new Date(period.startDate),
+        end: new Date(period.endDate),
+      }))
+    : [];
 
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      >
+      {isOpen && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ type: "spring", duration: 0.5 }}
-          className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto overflow-hidden"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
         >
-          {/* En-tête */}
-          <div className="relative p-6 border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 shadow-md">
-                  {tool.images[0] && (
-                    <img
-                      src={tool.images[0]}
-                      alt={tool.name}
-                      className="w-full h-full object-cover"
-                    />
-                  )}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: "spring", duration: 0.5 }}
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto overflow-hidden"
+          >
+            {/* En-tête */}
+            <div className="relative p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 shadow-md">
+                    {tool.images[0] && (
+                      <img
+                        src={tool.images[0]}
+                        alt={tool.name}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      {tool.name}
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {tool.owner.firstName} {tool.owner.lastName}
+                    </p>
+                  </div>
                 </div>
+                <button
+                  onClick={onClose}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+              <p className="text-sm text-blue-600 font-medium mt-2 text-right">
+                {tool.dailyPrice.toLocaleString()} FCFA / jour
+              </p>
+            </div>
+
+            {/* Bloc d'alerte périodes réservées - design pro */}
+            {bookedPeriods.length > 0 && (
+              <div className="mb-6 flex items-start gap-3 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-xl shadow-sm">
+                <Clock className="w-6 h-6 text-blue-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">
-                    {tool.name}
-                  </h2>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {tool.owner.firstName} {tool.owner.lastName}
+                  <div className="font-semibold text-blue-900 mb-1">
+                    {calculateNextAvailableSlot(bookedPeriods)?.message}
+                  </div>
+                  <p className="text-blue-700 text-sm">
+                    {bookedPeriods.length} réservation
+                    {bookedPeriods.length > 1 ? "s" : ""} active
+                    {bookedPeriods.length > 1 ? "s" : ""}
                   </p>
                 </div>
               </div>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <p className="text-sm text-blue-600 font-medium mt-2 text-right">
-              {tool.dailyPrice.toLocaleString()} FCFA / jour
-            </p>
-          </div>
+            )}
 
-          {/* Bloc d'alerte périodes réservées - design pro */}
-          {bookedPeriods.length > 0 && (
-            <div className="mb-6 flex items-start gap-3 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-xl shadow-sm">
-              <AlertCircle className="w-6 h-6 text-yellow-500 mt-0.5 flex-shrink-0" />
-              <div>
-                <div className="font-semibold text-yellow-900 mb-1">
-                  Périodes déjà réservées :
-                </div>
-                <ul className="list-disc ml-5 text-yellow-900 text-sm space-y-1">
-                  {bookedPeriods.map((period, idx) => (
-                    <li key={idx}>
-                      {format(new Date(period.startDate), "dd/MM/yyyy")} au{" "}
-                      {format(new Date(period.endDate), "dd/MM/yyyy")}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )}
-
-          {/* Formulaire */}
-          <form onSubmit={handleSubmit} className="p-6">
-            <div className="space-y-6">
-              {/* Dates et Récapitulatif */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Dates */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Calendar className="w-5 h-5 text-blue-600" />
-                    <h3 className="text-sm font-semibold text-gray-900">
-                      Dates de location
-                    </h3>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="bg-gray-50 rounded-md p-2">
-                      <DatePicker
-                        selected={startDate}
-                        onChange={(date: Date | null) => setStartDate(date)}
-                        minDate={new Date()}
-                        excludeDateIntervals={excludeIntervals}
-                        dateFormat="dd/MM/yyyy"
-                        placeholderText="Date de début"
-                        className="w-full border-gray-200 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 bg-gray-50"
-                        locale="fr"
-                      />
+            {/* Formulaire */}
+            <form onSubmit={handleSubmit} className="p-6">
+              <div className="space-y-6">
+                {/* Dates et Récapitulatif */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Dates */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Calendar className="w-5 h-5 text-blue-600" />
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Dates de location
+                      </h3>
                     </div>
-                    <div className="bg-gray-50 rounded-md p-2">
-                      <DatePicker
-                        selected={endDate}
-                        onChange={(date: Date | null) => setEndDate(date)}
-                        minDate={startDate || new Date()}
-                        excludeDateIntervals={excludeIntervals}
-                        dateFormat="dd/MM/yyyy"
-                        placeholderText="Date de fin"
-                        className="w-full border-gray-200 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 bg-gray-50"
-                        locale="fr"
-                      />
+                    <div className="space-y-3">
+                      <div className="bg-gray-50 rounded-md p-2">
+                        <DatePicker
+                          selected={startDate}
+                          onChange={(date: Date | null) => setStartDate(date)}
+                          minDate={new Date()}
+                          excludeDateIntervals={excludeIntervals}
+                          dateFormat="dd/MM/yyyy"
+                          placeholderText="Date de début"
+                          className="w-full border-gray-200 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 bg-gray-50"
+                          locale="fr"
+                        />
+                      </div>
+                      <div className="bg-gray-50 rounded-md p-2">
+                        <DatePicker
+                          selected={endDate}
+                          onChange={(date: Date | null) => setEndDate(date)}
+                          minDate={startDate || new Date()}
+                          excludeDateIntervals={excludeIntervals}
+                          dateFormat="dd/MM/yyyy"
+                          placeholderText="Date de fin"
+                          className="w-full border-gray-200 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3 bg-gray-50"
+                          locale="fr"
+                        />
+                      </div>
+                      {dateError && (
+                        <div className="text-red-600 text-sm mt-1">
+                          {dateError}
+                        </div>
+                      )}
                     </div>
-                    {dateError && (
-                      <div className="text-red-600 text-sm mt-1">
-                        {dateError}
-                      </div>
-                    )}
                   </div>
-                </div>
 
-                {/* Récapitulatif */}
-                {startDate && endDate && (
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="bg-blue-50 rounded-xl p-4 border border-blue-100"
-                  >
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Durée</span>
-                        <span className="font-medium text-blue-700">
-                          {differenceInDays(
-                            new Date(endDate),
-                            new Date(startDate)
-                          )}{" "}
-                          jours
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Caution</span>
-                        <span className="font-medium text-blue-700">
-                          {tool.caution?.toLocaleString() || 0} FCFA
-                        </span>
-                      </div>
-                      <div className="border-t border-blue-200 pt-2 mt-2">
-                        <div className="flex justify-between font-semibold">
-                          <span>Total</span>
-                          <span className="text-blue-700">
-                            {(
-                              differenceInDays(
-                                new Date(endDate),
-                                new Date(startDate)
-                              ) * tool.dailyPrice
-                            ).toLocaleString()}{" "}
-                            FCFA
+                  {/* Récapitulatif */}
+                  {startDate && endDate && (
+                    <motion.div
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="bg-blue-50 rounded-xl p-4 border border-blue-100"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Durée</span>
+                          <span className="font-medium text-blue-700">
+                            {differenceInDays(
+                              new Date(endDate),
+                              new Date(startDate)
+                            )}{" "}
+                            jours
                           </span>
                         </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Caution</span>
+                          <span className="font-medium text-blue-700">
+                            {tool.caution?.toLocaleString() || 0} FCFA
+                          </span>
+                        </div>
+                        <div className="border-t border-blue-200 pt-2 mt-2">
+                          <div className="flex justify-between font-semibold">
+                            <span>Total</span>
+                            <span className="text-blue-700">
+                              {(
+                                differenceInDays(
+                                  new Date(endDate),
+                                  new Date(startDate)
+                                ) * tool.dailyPrice
+                              ).toLocaleString()}{" "}
+                              FCFA
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                )}
-              </div>
+                    </motion.div>
+                  )}
+                </div>
 
-              {/* Conditions de location */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="terms"
-                        checked={hasAcceptedTerms}
-                        onChange={(e) => setHasAcceptedTerms(e.target.checked)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        disabled={!startDate || !endDate}
-                      />
-                      <label htmlFor="terms" className="text-sm text-gray-700">
-                        J'accepte les{" "}
-                        <button
-                          type="button"
-                          onClick={() => setShowContract(true)}
-                          className="text-blue-600 hover:text-blue-700 font-medium underline"
+                {/* Conditions de location */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="terms"
+                          checked={hasAcceptedTerms}
+                          onChange={(e) =>
+                            setHasAcceptedTerms(e.target.checked)
+                          }
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          disabled={!startDate || !endDate}
+                        />
+                        <label
+                          htmlFor="terms"
+                          className="text-sm text-gray-700"
                         >
-                          conditions de location
-                        </button>
-                      </label>
+                          J'accepte les{" "}
+                          <button
+                            type="button"
+                            onClick={() => setShowContract(true)}
+                            className="text-blue-600 hover:text-blue-700 font-medium underline cursor-pointer"
+                          >
+                            conditions de location
+                          </button>
+                        </label>
+                      </div>
+                      {(!startDate || !endDate) && (
+                        <p className="text-xs text-gray-500 mt-1 ml-6">
+                          Sélectionnez les dates de réservation pour activer
+                          l'acceptation des conditions
+                        </p>
+                      )}
                     </div>
-                    {(!startDate || !endDate) && (
-                      <p className="text-xs text-gray-500 mt-1 ml-6">
-                        Sélectionnez les dates de réservation pour activer
-                        l'acceptation des conditions
-                      </p>
-                    )}
                   </div>
                 </div>
-              </div>
 
-              {/* Message d'erreur */}
-              {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                  {error}
+                {/* Message d'erreur */}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-red-700 text-sm">{error}</p>
+                  </div>
+                )}
+
+                {/* Boutons d'action */}
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onClose}
+                    disabled={isLoading}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    isLoading={isLoading}
+                    disabled={!isFormValid || isLoading}
+                  >
+                    {isLoading ? "Création..." : "Confirmer la réservation"}
+                  </Button>
                 </div>
-              )}
-
-              {/* Boutons */}
-              <div className="flex justify-end space-x-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onClose}
-                  disabled={isLoading}
-                  className="px-4 border-gray-300 text-gray-700 hover:bg-gray-50"
-                >
-                  Annuler
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isLoading || !hasAcceptedTerms || !!dateError}
-                  className="px-4 bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  {isLoading ? (
-                    <div className="flex items-center">
-                      <Clock className="w-4 h-4 mr-2 animate-spin" />
-                      Traitement...
-                    </div>
-                  ) : (
-                    "Confirmer la réservation"
-                  )}
-                </Button>
               </div>
-            </div>
-          </form>
-
-          {/* Modal du contrat */}
-          {showContract && (
-            <ContractModal
-              isOpen={showContract}
-              onClose={() => setShowContract(false)}
-              tool={tool}
-              startDate={startDate ? format(startDate, "yyyy-MM-dd") : ""}
-              endDate={endDate ? format(endDate, "yyyy-MM-dd") : ""}
-            />
-          )}
+            </form>
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
+
+      {/* Modal du contrat */}
+      <ContractModal
+        isOpen={showContract}
+        onClose={() => setShowContract(false)}
+        tool={tool}
+        startDate={startDate ? format(startDate, "yyyy-MM-dd") : ""}
+        endDate={endDate ? format(endDate, "yyyy-MM-dd") : ""}
+      />
     </AnimatePresence>
   );
 };

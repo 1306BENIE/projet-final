@@ -1,6 +1,6 @@
 import { MapPin, Star, ShieldCheck, Heart } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import type { Tool } from "@/interfaces/tools/tool";
 import { useState } from "react";
 import { useAuth } from "@/store/useAuth";
@@ -24,6 +24,7 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
 
   const handleReserve = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!user) {
       toast.error("Vous devez être connecté pour réserver un outil");
       navigate("/login");
@@ -176,13 +177,15 @@ export default function ToolCard({ tool, index = 0 }: ToolCardProps) {
         </div>
       </Link>
 
-      {isBookingModalOpen && (
-        <BookingModal
-          isOpen={isBookingModalOpen}
-          onClose={() => setIsBookingModalOpen(false)}
-          tool={tool}
-        />
-      )}
+      <AnimatePresence>
+        {isBookingModalOpen && (
+          <BookingModal
+            isOpen={isBookingModalOpen}
+            onClose={() => setIsBookingModalOpen(false)}
+            tool={tool}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

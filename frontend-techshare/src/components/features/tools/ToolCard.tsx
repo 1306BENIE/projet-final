@@ -40,6 +40,7 @@ export default function ToolCard({
 
   const handleReserve = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!user) {
       toast.error("Vous devez être connecté pour réserver un outil");
       navigate("/login");
@@ -316,13 +317,16 @@ export default function ToolCard({
         )}
       </AnimatePresence>
 
-      {isBookingModalOpen && (
-        <BookingModal
-          isOpen={isBookingModalOpen}
-          onClose={() => setIsBookingModalOpen(false)}
-          tool={tool}
-        />
-      )}
+      {/* Modal de réservation */}
+      <AnimatePresence>
+        {isBookingModalOpen && (
+          <BookingModal
+            isOpen={isBookingModalOpen}
+            onClose={() => setIsBookingModalOpen(false)}
+            tool={tool}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

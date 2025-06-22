@@ -34,6 +34,14 @@ interface CancellationInfo {
   daysUntilStart: number;
 }
 
+// Définir l'interface pour la réponse de l'API
+export interface BookedDatesResponse {
+  bookedDates: {
+    startDate: string;
+    endDate: string;
+  }[];
+}
+
 // Fonction utilitaire pour valider une réservation
 function isValidBooking(booking: unknown): booking is Booking {
   if (!booking || typeof booking !== "object" || booking === null) {
@@ -311,8 +319,8 @@ class BookingService {
     return response.data;
   }
 
-  async getBookedDates(toolId: string) {
-    const response = await api.get<{ startDate: string; endDate: string }[]>(
+  async getBookedDates(toolId: string): Promise<BookedDatesResponse> {
+    const response = await api.get<BookedDatesResponse>(
       `/tools/${toolId}/booked-dates`
     );
     return response.data;
