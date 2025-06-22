@@ -6,15 +6,8 @@ const Tool_1 = require("../models/Tool");
 const mongoose_1 = require("mongoose");
 const logger_1 = require("../utils/logger");
 const Notification_1 = require("../models/Notification");
-// Centralized error handler
-const handleError = (error, res) => {
-    logger_1.logger.error("Booking controller error:", error);
-    res.status(error.status || 500).json({
-        message: error.message || "Internal server error",
-    });
-};
 // Create a new booking
-const createBooking = async (req, res) => {
+const createBooking = async (req, res, next) => {
     try {
         const { toolId, startDate, endDate, message } = req.body;
         const userId = req.user?.userId;
@@ -26,27 +19,30 @@ const createBooking = async (req, res) => {
         }
         const userObjectId = new mongoose_1.Types.ObjectId(userId);
         const toolObjectId = new mongoose_1.Types.ObjectId(toolId);
+        // Les chaînes ISO sont déjà en UTC, new Date les interprète correctement.
+        const startUTC = new Date(startDate);
+        const endUTC = new Date(endDate);
         // Check if tool exists and is available
         const tool = await Tool_1.Tool.findById(toolObjectId);
         if (!tool) {
             return res.status(404).json({ message: "Tool not found" });
         }
         // Check if dates are available
-        const isAvailable = await Booking_1.Booking.checkAvailability(toolObjectId, new Date(startDate), new Date(endDate));
+        const isAvailable = await Booking_1.Booking.checkAvailability(toolObjectId, startUTC, endUTC);
         if (!isAvailable) {
             return res.status(400).json({
                 message: "Tool is not available for the selected dates",
             });
         }
         // Calculate total price
-        const totalPrice = await Booking_1.Booking.calculateTotalPrice(toolObjectId, new Date(startDate), new Date(endDate));
+        const totalPrice = await Booking_1.Booking.calculateTotalPrice(toolObjectId, startUTC, endUTC);
         // Create booking
         const booking = new Booking_1.Booking({
             tool: toolObjectId,
             renter: userObjectId,
             owner: tool.owner,
-            startDate,
-            endDate,
+            startDate: startUTC,
+            endDate: endUTC,
             totalPrice,
             depositAmount: tool.caution || 0,
             message,
@@ -60,9 +56,8 @@ const createBooking = async (req, res) => {
         });
     }
     catch (error) {
-        handleError(error, res);
+        next(error);
     }
-    return;
 };
 exports.createBooking = createBooking;
 // Get all bookings (with pagination)
@@ -97,9 +92,8 @@ const getAllBookings = async (req, res) => {
         });
     }
     catch (error) {
-        handleError(error, res);
+        res.status(500).json({ message: "Internal server error" });
     }
-    return;
 };
 exports.getAllBookings = getAllBookings;
 // Get user's bookings
@@ -130,9 +124,8 @@ const getUserBookings = async (req, res) => {
         });
     }
     catch (error) {
-        handleError(error, res);
+        res.status(500).json({ message: "Internal server error" });
     }
-    return;
 };
 exports.getUserBookings = getUserBookings;
 // Get owner's bookings
@@ -245,9 +238,8 @@ const getOwnerBookings = async (req, res) => {
         });
     }
     catch (error) {
-        handleError(error, res);
+        res.status(500).json({ message: "Internal server error" });
     }
-    return;
 };
 exports.getOwnerBookings = getOwnerBookings;
 // Get booking by ID
@@ -292,9 +284,8 @@ const getBookingById = async (req, res) => {
         res.json(booking);
     }
     catch (error) {
-        handleError(error, res);
+        res.status(500).json({ message: "Internal server error" });
     }
-    return;
 };
 exports.getBookingById = getBookingById;
 // Get cancellation eligibility for a booking
@@ -363,9 +354,8 @@ const getCancellationEligibility = async (req, res) => {
     }
     catch (error) {
         console.error("Error in getCancellationEligibility:", error);
-        handleError(error, res);
+        res.status(500).json({ message: "Internal server error" });
     }
-    return;
 };
 exports.getCancellationEligibility = getCancellationEligibility;
 // Cancel booking
@@ -444,9 +434,8 @@ const cancelBooking = async (req, res) => {
         });
     }
     catch (error) {
-        handleError(error, res);
+        res.status(500).json({ message: "Internal server error" });
     }
-    return;
 };
 exports.cancelBooking = cancelBooking;
 // Helper function to calculate cancellation eligibility and fees
@@ -551,41 +540,46 @@ const updateBooking = async (req, res) => {
         });
     }
     catch (error) {
-        handleError(error, res);
+        res.status(500).json({ message: "Internal server error" });
     }
-    return;
 };
 exports.updateBooking = updateBooking;
 // GET /api/tools/:toolId/booked-dates
-const getBookedDates = async (req, res) => {
+const getBookedDates = async (req, res, next) => {
     try {
         const { toolId } = req.params;
-        const { startDate, endDate } = req.query;
+        logger_1.logger.info(`[getBookedDates] Start for toolId: ${toolId}`);
         if (!toolId || !mongoose_1.Types.ObjectId.isValid(toolId)) {
+            logger_1.logger.warn(`[getBookedDates] Invalid toolId: ${toolId}`);
             return res.status(400).json({ message: "Invalid tool ID" });
         }
+        const currentDate = new Date(); // Directement en UTC
         const query = {
             tool: new mongoose_1.Types.ObjectId(toolId),
             status: { $in: ["pending", "approved", "active"] },
+            endDate: { $gte: currentDate },
         };
-        if (startDate && endDate) {
-            query.$or = [
-                {
-                    startDate: { $lte: new Date(endDate) },
-                    endDate: { $gte: new Date(startDate) },
-                },
-            ];
-        }
-        const bookings = await Booking_1.Booking.find(query).select("startDate endDate");
+        logger_1.logger.info({
+            message: "[getBookedDates] Executing query",
+            query: JSON.stringify(query),
+        });
+        const bookings = await Booking_1.Booking.find(query)
+            .select("startDate endDate status")
+            .sort({ startDate: 1 });
+        logger_1.logger.info(`[getBookedDates] Found ${bookings.length} bookings.`);
         const bookedDates = bookings.map((booking) => ({
             startDate: booking.startDate,
             endDate: booking.endDate,
+            status: booking.status,
         }));
-        res.json({ bookedDates });
+        res.json({
+            bookedDates,
+            totalActiveBookings: bookedDates.length,
+            currentDate: currentDate.toISOString(),
+        });
     }
     catch (error) {
-        console.error("Error getting booked dates:", error);
-        res.status(500).json({ message: "Internal server error" });
+        next(error);
     }
 };
 exports.getBookedDates = getBookedDates;

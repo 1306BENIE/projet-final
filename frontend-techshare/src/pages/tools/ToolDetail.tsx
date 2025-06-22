@@ -14,6 +14,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertCircle } from "lucide-react";
 import { BookingModal } from "@/components/features/booking/BookingModal";
+import { useBookingModal } from "@/hooks/useBookingModal";
 
 const ToolDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,7 +22,8 @@ const ToolDetail: React.FC = () => {
   const [tool, setTool] = useState<Tool | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const { isModalOpen, openModal, closeModal, bookedPeriods } =
+    useBookingModal();
 
   const fetchTool = useCallback(async () => {
     try {
@@ -248,20 +250,10 @@ const ToolDetail: React.FC = () => {
                       <motion.button
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.97 }}
-                        onClick={() => setIsBookingModalOpen(true)}
-                        className="w-48 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-lg 
-                                 hover:from-indigo-700 hover:to-blue-600 transition-all duration-300 
-                                 font-semibold text-sm tracking-wide shadow-lg hover:shadow-xl
-                                 border border-indigo-500/20 backdrop-blur-sm
-                                 relative overflow-hidden group"
+                        className="w-full mt-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300 transform hover:scale-105"
+                        onClick={() => openModal(tool)}
                       >
-                        <span className="relative z-10">
-                          Réserver maintenant
-                        </span>
-                        <div
-                          className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 
-                                      translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"
-                        />
+                        Réserver maintenant
                       </motion.button>
                     </div>
                   </div>
@@ -273,11 +265,12 @@ const ToolDetail: React.FC = () => {
       </div>
 
       <AnimatePresence>
-        {tool && isBookingModalOpen && (
+        {isModalOpen && tool && (
           <BookingModal
-            isOpen={isBookingModalOpen}
-            onClose={() => setIsBookingModalOpen(false)}
+            isOpen={isModalOpen}
+            onClose={closeModal}
             tool={tool}
+            bookedPeriods={bookedPeriods}
           />
         )}
       </AnimatePresence>

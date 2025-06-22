@@ -187,16 +187,32 @@ bookingSchema.index({ tool: 1, startDate: 1, endDate: 1 });
 bookingSchema.index({ status: 1, startDate: 1 });
 // Static method to check availability
 bookingSchema.statics.checkAvailability = async function (toolId, startDate, endDate) {
-    const overlappingBooking = await this.findOne({
+    const currentDate = new Date(); // Directement en UTC
+    const query = {
         tool: toolId,
         status: { $in: ["pending", "approved", "active"] },
+        endDate: { $gte: currentDate },
         $or: [
             {
                 startDate: { $lte: endDate },
                 endDate: { $gte: startDate },
             },
         ],
+    };
+    logger_1.logger.info({
+        message: "[checkAvailability] Executing query",
+        query: JSON.stringify(query),
     });
+    const overlappingBooking = await this.findOne(query);
+    if (overlappingBooking) {
+        logger_1.logger.warn({
+            message: "[checkAvailability] Found overlapping booking",
+            bookingId: overlappingBooking._id,
+        });
+    }
+    else {
+        logger_1.logger.info("[checkAvailability] No overlapping booking found.");
+    }
     return !overlappingBooking;
 };
 // Static method to calculate total price
