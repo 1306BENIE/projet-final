@@ -1,6 +1,6 @@
 import { Booking } from "@/interfaces/booking/booking.interface";
 import { CreateBookingDto } from "@/interfaces/booking/dto.interface";
-import api from "./api";
+import api from "@/services/api";
 import {
   ReceivedBooking,
   ReceivedBookingsResponse,
@@ -32,6 +32,18 @@ interface CancellationInfo {
   refundAmount: number;
   hoursUntilStart: number;
   daysUntilStart: number;
+}
+
+// Interface pour la réponse de paiement Stripe
+interface StripePaymentResponse {
+  message: string;
+  clientSecret?: string;
+  paymentIntent?: {
+    id: string;
+    amount: number;
+    currency: string;
+    status: string;
+  };
 }
 
 // Définir l'interface pour la réponse de l'API
@@ -66,8 +78,17 @@ function isValidBooking(booking: unknown): booking is Booking {
 
 class BookingService {
   async createBooking(data: CreateBookingDto): Promise<Booking> {
-    const response = await api.post<Booking>("/bookings", data);
-    return response.data;
+    const response = await api.post<{ booking: Booking }>("/bookings", data);
+    const booking = response.data.booking;
+    // Map _id vers id si nécessaire
+    if (
+      booking &&
+      (booking as unknown as { _id?: string })._id &&
+      !booking.id
+    ) {
+      booking.id = (booking as unknown as { _id: string })._id;
+    }
+    return booking;
   }
 
   async getBookings(page = 1, limit = 10): Promise<BookingsResponse> {
@@ -324,9 +345,78 @@ class BookingService {
 
   async getBookedDates(toolId: string): Promise<BookedDatesResponse> {
     const response = await api.get<BookedDatesResponse>(
-      `/tools/${toolId}/booked-dates`
+      `/bookings/booked-dates/${toolId}`
     );
     return response.data;
+  }
+
+  // Méthode pour créer une réservation et récupérer immédiatement le clientSecret
+  async createBookingWithPayment(data: CreateBookingDto): Promise<{
+    booking: Booking;
+  }> {
+    try {
+      // Créer la réservation
+      const booking = await this.createBooking(data);
+      // Retourner simplement le booking, le paiement sera géré dans le PaymentModal
+      return { booking };
+    } catch (error) {
+      console.error(
+        "Erreur lors de la création de la réservation avec paiement:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  // Nouvelle méthode pour créer un PaymentIntent Stripe
+  async createPaymentIntent({
+    amount,
+    currency = "xof",
+    rentalId,
+    paymentMethodId,
+  }: {
+    amount: number;
+    currency?: string;
+    rentalId: string;
+    paymentMethodId: string;
+  }): Promise<StripePaymentResponse> {
+    try {
+      // Log du body envoyé
+      console.log("Body envoyé à /api/payments/create-intent :", {
+        amount,
+        currency,
+        rentalId,
+        paymentMethodId,
+      });
+      const response = await api.post<StripePaymentResponse>(
+        "/payments/create-intent",
+        {
+          amount,
+          currency,
+          rentalId,
+          paymentMethodId,
+        }
+      );
+      return response.data;
+    } catch (error: unknown) {
+      // Log du détail de l'erreur backend
+      type AxiosErrorLike = { response?: { data?: unknown } };
+      if (
+        error &&
+        typeof error === "object" &&
+        "response" in error &&
+        (error as AxiosErrorLike).response
+      ) {
+        const err = error as AxiosErrorLike;
+        console.error(
+          "Erreur API paiement (détail complet) :",
+          JSON.stringify(err.response, null, 2)
+        );
+      } else {
+        console.error("Erreur lors de la création du payment intent:", error);
+      }
+      throw new Error("Impossible de créer le paiement");
+    }
   }
 }
 

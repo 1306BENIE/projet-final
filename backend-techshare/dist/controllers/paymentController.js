@@ -24,31 +24,31 @@ exports.paymentController = {
             }
             const { rentalId } = req.body;
             if (!rentalId) {
-                throw new errors_1.ValidationError("L'ID de la location est requis");
+                throw new errors_1.ValidationError("L'ID de la réservation est requis");
             }
-            const rental = await models_1.Rental.findById(rentalId).populate("tool");
-            if (!rental) {
-                throw new errors_1.DatabaseError("Location non trouvée");
+            const booking = await models_1.Booking.findById(rentalId).populate("tool");
+            if (!booking) {
+                throw new errors_1.DatabaseError("Réservation non trouvée");
             }
             // Check if user is the renter
-            if (rental.renter.toString() !== req.user.userId) {
+            if (booking.renter.toString() !== req.user.userId) {
                 throw new errors_1.AuthenticationError("Accès refusé");
             }
             // Check if payment is already completed
-            if (rental.paymentStatus === "paid") {
+            if (booking.paymentStatus === "paid") {
                 throw new errors_1.ValidationError("Le paiement a déjà été effectué");
             }
             const paymentIntent = await stripe.paymentIntents.create({
-                amount: Math.round(rental.totalPrice * 100), // Convert to cents and ensure integer
+                amount: Math.round(booking.totalPrice * 100), // Convert to cents and ensure integer
                 currency: "eur",
                 metadata: {
-                    rentalId: rental._id.toString(),
+                    bookingId: booking._id.toString(),
                     userId: req.user.userId,
                 },
             });
-            // Update rental with payment intent ID
-            rental.stripePaymentId = paymentIntent.id;
-            await rental.save();
+            // Update booking with payment intent ID
+            booking.paymentIntentId = paymentIntent.id;
+            await booking.save();
             const response = {
                 message: "Intention de paiement créée avec succès",
                 clientSecret: paymentIntent.client_secret || undefined,
@@ -94,7 +94,7 @@ exports.paymentController = {
             if (!req.user?.userId) {
                 throw new errors_1.AuthenticationError("Non autorisé");
             }
-            const rentals = await models_1.Rental.find({
+            const bookings = await models_1.Booking.find({
                 renter: new mongoose_1.Types.ObjectId(req.user.userId),
                 paymentStatus: "paid",
             })
@@ -102,7 +102,7 @@ exports.paymentController = {
                 .sort({ createdAt: -1 });
             const response = {
                 message: "Historique des paiements récupéré avec succès",
-                rentals,
+                bookings,
             };
             res.status(200).json(response);
         }
@@ -121,15 +121,15 @@ exports.paymentController = {
                 throw new errors_1.ValidationError("L'ID de l'intention de paiement est requis");
             }
             // Vérifier si l'utilisateur a le droit de rembourser ce paiement
-            const rental = await models_1.Rental.findOne({
-                stripePaymentId: paymentIntentId,
+            const booking = await models_1.Booking.findOne({
+                paymentIntentId: paymentIntentId,
             }).populate("tool");
-            if (!rental) {
+            if (!booking) {
                 throw new errors_1.DatabaseError("Paiement non trouvé");
             }
             // Seul l'admin ou le propriétaire de l'outil peut rembourser
             if (req.user.role !== "admin" &&
-                rental.tool.owner.toString() !== req.user.userId) {
+                booking.tool.owner.toString() !== req.user.userId) {
                 throw new errors_1.AuthenticationError("Accès refusé");
             }
             const refund = await stripe.refunds.create({
@@ -137,10 +137,10 @@ exports.paymentController = {
                 amount: amount ? Math.round(amount * 100) : undefined,
                 reason: reason || undefined,
             });
-            // Mettre à jour le statut de la location
-            rental.paymentStatus = "refunded";
-            rental.status = "cancelled";
-            await rental.save();
+            // Mettre à jour le statut de la réservation
+            booking.paymentStatus = "refunded";
+            booking.status = "cancelled";
+            await booking.save();
             const response = {
                 message: "Remboursement effectué avec succès",
                 refund,
@@ -162,16 +162,16 @@ exports.paymentController = {
                 throw new errors_1.ValidationError("L'ID de l'intention de paiement est requis");
             }
             // Vérifier si l'utilisateur a le droit de voir ce paiement
-            const rental = await models_1.Rental.findOne({
-                stripePaymentId: paymentIntentId,
+            const booking = await models_1.Booking.findOne({
+                paymentIntentId: paymentIntentId,
             }).populate("tool");
-            if (!rental) {
+            if (!booking) {
                 throw new errors_1.DatabaseError("Paiement non trouvé");
             }
             // Seul l'admin, le propriétaire de l'outil ou le locataire peut voir le paiement
             if (req.user.role !== "admin" &&
-                rental.tool.owner.toString() !== req.user.userId &&
-                rental.renter.toString() !== req.user.userId) {
+                booking.tool.owner.toString() !== req.user.userId &&
+                booking.renter.toString() !== req.user.userId) {
                 throw new errors_1.AuthenticationError("Accès refusé");
             }
             const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
@@ -189,16 +189,18 @@ exports.paymentController = {
 // Helper functions for webhook handling
 async function handlePaymentSuccess(paymentIntent) {
     try {
-        const rental = await models_1.Rental.findOne({ stripePaymentId: paymentIntent.id });
-        if (!rental) {
-            logger_1.logger.error(`Aucune location trouvée pour le paiement: ${paymentIntent.id}`);
+        const booking = await models_1.Booking.findOne({
+            paymentIntentId: paymentIntent.id,
+        });
+        if (!booking) {
+            logger_1.logger.error(`Aucune réservation trouvée pour le paiement: ${paymentIntent.id}`);
             return;
         }
-        rental.paymentStatus = "paid";
-        rental.status = "active";
-        await rental.save();
+        booking.paymentStatus = "paid";
+        booking.status = "active";
+        await booking.save();
         // Update tool status
-        const tool = await models_1.Tool.findById(rental.tool);
+        const tool = await models_1.Tool.findById(booking.tool);
         if (tool) {
             tool.status = "rented";
             await tool.save();
@@ -210,16 +212,18 @@ async function handlePaymentSuccess(paymentIntent) {
 }
 async function handlePaymentFailure(paymentIntent) {
     try {
-        const rental = await models_1.Rental.findOne({ stripePaymentId: paymentIntent.id });
-        if (!rental) {
-            logger_1.logger.error(`Aucune location trouvée pour le paiement: ${paymentIntent.id}`);
+        const booking = await models_1.Booking.findOne({
+            paymentIntentId: paymentIntent.id,
+        });
+        if (!booking) {
+            logger_1.logger.error(`Aucune réservation trouvée pour le paiement: ${paymentIntent.id}`);
             return;
         }
-        rental.paymentStatus = "pending";
-        rental.status = "cancelled";
-        await rental.save();
+        booking.paymentStatus = "pending";
+        booking.status = "cancelled";
+        await booking.save();
         // Update tool status
-        const tool = await models_1.Tool.findById(rental.tool);
+        const tool = await models_1.Tool.findById(booking.tool);
         if (tool) {
             tool.status = "available";
             await tool.save();

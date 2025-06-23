@@ -3,15 +3,14 @@ import { AxiosError } from "axios";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { format, differenceInDays, addDays, isAfter } from "date-fns";
 import { X, Calendar, Clock } from "lucide-react";
-import { toast } from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Button } from "@/components/ui/Button";
 import { Tool } from "@/interfaces/tools/tool";
 import { CreateBookingDto } from "@/interfaces/booking/dto.interface";
-import { bookingService } from "@/services/bookingService";
 import { ContractModal } from "@/components/features/booking/ContractModal";
+import { PaymentModal } from "@/components/features/booking/PaymentModal";
+import { usePayment } from "@/hooks/usePayment";
 import { fr } from "date-fns/locale";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 
@@ -180,8 +179,18 @@ export const BookingModal = ({
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const [showContract, setShowContract] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
   const [dateError, setDateError] = useState<string | null>(null);
+
+  // Hook pour gérer le paiement
+  const {
+    isPaymentModalOpen,
+    currentBookingId,
+    currentAmount,
+    closePaymentModal,
+    handlePaymentSuccess,
+    handlePaymentError,
+    createBookingWithPayment,
+  } = usePayment();
 
   // Valeur par défaut pour éviter undefined
   const safeBookedPeriods = bookedPeriods || [];
@@ -294,11 +303,16 @@ export const BookingModal = ({
       };
 
       console.log("Sending booking data:", bookingData);
-      await bookingService.createBooking(bookingData);
 
-      toast.success("Réservation créée avec succès !");
-      onClose();
-      navigate("/my-bookings");
+      // Utiliser la nouvelle méthode avec paiement
+      const success = await createBookingWithPayment(bookingData);
+
+      if (success) {
+        // Le modal de paiement s'ouvrira automatiquement si nécessaire
+        // ou on affichera un message de succès
+        onClose();
+        // Ne pas naviguer automatiquement, laisser l'utilisateur gérer le paiement
+      }
     } catch (error) {
       console.error("Booking error:", error);
       if (error instanceof AxiosError) {
@@ -328,6 +342,15 @@ export const BookingModal = ({
       }))
     : [];
 
+  // Affichage du PaymentModal après la création de la réservation
+  console.log(
+    "BookingModal: isPaymentModalOpen",
+    isPaymentModalOpen,
+    "currentBookingId",
+    currentBookingId,
+    "currentAmount",
+    currentAmount
+  );
   return (
     <AnimatePresence>
       {isOpen && (
@@ -584,6 +607,20 @@ export const BookingModal = ({
         startDate={startDate ? format(startDate, "yyyy-MM-dd") : ""}
         endDate={endDate ? format(endDate, "yyyy-MM-dd") : ""}
       />
+
+      {/* Modal de paiement */}
+      <AnimatePresence>
+        {isPaymentModalOpen && currentBookingId && (
+          <PaymentModal
+            isOpen={isPaymentModalOpen}
+            onClose={closePaymentModal}
+            bookingId={currentBookingId}
+            amount={currentAmount}
+            onPaymentSuccess={handlePaymentSuccess}
+            onPaymentError={handlePaymentError}
+          />
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   );
 };

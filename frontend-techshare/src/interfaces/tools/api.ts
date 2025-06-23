@@ -1,4 +1,4 @@
-import type { Tool } from "./tool";
+import type { Tool } from "@/interfaces/tools/tool";
 
 export interface ApiToolData {
   _id: string;

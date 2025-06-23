@@ -487,4 +487,26 @@ router.put(
  */
 router.get("/", auth, validatePagination, bookingController.getAllBookings);
 
+/**
+ * @swagger
+ * /api/bookings/booked-dates/:toolId:
+ *   get:
+ *     summary: Get booked dates for a tool
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: toolId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of booked dates for the tool
+ *       401:
+ *         description: Unauthorized
+ */
+router.get("/booked-dates/:toolId", bookingController.getBookedDates);
+
 export default router;

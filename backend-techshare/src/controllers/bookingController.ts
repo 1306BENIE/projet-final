@@ -66,6 +66,13 @@ export const createBooking = async (req: Request, res: Response, next) => {
 
     await booking.save();
 
+    // Logs avancés pour le debug
+    logger.info(
+      "[Booking] Booking créé (objet complet):",
+      JSON.stringify(booking)
+    );
+    logger.info("[Booking] Booking créé avec _id (direct):", booking._id);
+
     // Add notification
     booking.addNotification("status_change", "New booking request received");
 
@@ -656,49 +663,31 @@ export const updateBooking = async (req: Request, res: Response) => {
   }
 };
 
-// GET /api/tools/:toolId/booked-dates
-export const getBookedDates = async (req: Request, res: Response, next) => {
+// GET /api/bookings/booked-dates/:toolId
+export const getBookedDates = async (req: Request, res: Response) => {
+  const { toolId } = req.params;
+  if (!toolId) {
+    return res.status(400).json({ message: "Tool ID is required" });
+  }
   try {
-    const { toolId } = req.params;
-    logger.info(`[getBookedDates] Start for toolId: ${toolId}`);
-
-    if (!toolId || !Types.ObjectId.isValid(toolId)) {
-      logger.warn(`[getBookedDates] Invalid toolId: ${toolId}`);
-      return res.status(400).json({ message: "Invalid tool ID" });
-    }
-
-    const currentDate = new Date(); // Directement en UTC
-
-    const query = {
-      tool: new Types.ObjectId(toolId),
+    const bookings = await Booking.find({
+      tool: toolId,
       status: { $in: ["pending", "approved", "active"] },
-      endDate: { $gte: currentDate },
-    };
-
-    logger.info({
-      message: "[getBookedDates] Executing query",
-      query: JSON.stringify(query),
-    });
-
-    const bookings = await Booking.find(query)
-      .select("startDate endDate status")
-      .sort({ startDate: 1 });
-
-    logger.info(`[getBookedDates] Found ${bookings.length} bookings.`);
-
-    const bookedDates = bookings.map((booking) => ({
-      startDate: booking.startDate,
-      endDate: booking.endDate,
-      status: booking.status,
-    }));
-
+    }).select("startDate endDate status");
     res.json({
-      bookedDates,
-      totalActiveBookings: bookedDates.length,
-      currentDate: currentDate.toISOString(),
+      bookedDates: bookings.map((b) => ({
+        startDate: b.startDate,
+        endDate: b.endDate,
+        status: b.status,
+      })),
+      totalActiveBookings: bookings.length,
+      currentDate: new Date().toISOString(),
     });
   } catch (error) {
-    next(error);
+    logger.error("Erreur lors de la récupération des dates réservées:", error);
+    res.status(500).json({
+      message: "Erreur serveur lors de la récupération des dates réservées",
+    });
   }
 };
 

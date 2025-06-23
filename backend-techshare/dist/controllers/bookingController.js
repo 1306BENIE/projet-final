@@ -544,42 +544,32 @@ const updateBooking = async (req, res) => {
     }
 };
 exports.updateBooking = updateBooking;
-// GET /api/tools/:toolId/booked-dates
-const getBookedDates = async (req, res, next) => {
+// GET /api/bookings/booked-dates/:toolId
+const getBookedDates = async (req, res) => {
+    const { toolId } = req.params;
+    if (!toolId) {
+        return res.status(400).json({ message: "Tool ID is required" });
+    }
     try {
-        const { toolId } = req.params;
-        logger_1.logger.info(`[getBookedDates] Start for toolId: ${toolId}`);
-        if (!toolId || !mongoose_1.Types.ObjectId.isValid(toolId)) {
-            logger_1.logger.warn(`[getBookedDates] Invalid toolId: ${toolId}`);
-            return res.status(400).json({ message: "Invalid tool ID" });
-        }
-        const currentDate = new Date(); // Directement en UTC
-        const query = {
-            tool: new mongoose_1.Types.ObjectId(toolId),
+        const bookings = await Booking_1.Booking.find({
+            tool: toolId,
             status: { $in: ["pending", "approved", "active"] },
-            endDate: { $gte: currentDate },
-        };
-        logger_1.logger.info({
-            message: "[getBookedDates] Executing query",
-            query: JSON.stringify(query),
-        });
-        const bookings = await Booking_1.Booking.find(query)
-            .select("startDate endDate status")
-            .sort({ startDate: 1 });
-        logger_1.logger.info(`[getBookedDates] Found ${bookings.length} bookings.`);
-        const bookedDates = bookings.map((booking) => ({
-            startDate: booking.startDate,
-            endDate: booking.endDate,
-            status: booking.status,
-        }));
+        }).select("startDate endDate status");
         res.json({
-            bookedDates,
-            totalActiveBookings: bookedDates.length,
-            currentDate: currentDate.toISOString(),
+            bookedDates: bookings.map((b) => ({
+                startDate: b.startDate,
+                endDate: b.endDate,
+                status: b.status,
+            })),
+            totalActiveBookings: bookings.length,
+            currentDate: new Date().toISOString(),
         });
     }
     catch (error) {
-        next(error);
+        logger_1.logger.error("Erreur lors de la récupération des dates réservées:", error);
+        res.status(500).json({
+            message: "Erreur serveur lors de la récupération des dates réservées",
+        });
     }
 };
 exports.getBookedDates = getBookedDates;

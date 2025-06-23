@@ -468,5 +468,26 @@ router.put("/:id/reject", auth_middleware_1.auth, (0, validateObjectId_1.validat
  *         description: Unauthorized
  */
 router.get("/", auth_middleware_1.auth, validatePagination_1.validatePagination, bookingController.getAllBookings);
+/**
+ * @swagger
+ * /api/bookings/booked-dates/:toolId:
+ *   get:
+ *     summary: Get booked dates for a tool
+ *     tags: [Bookings]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: toolId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of booked dates for the tool
+ *       401:
+ *         description: Unauthorized
+ */
+router.get("/booked-dates/:toolId", bookingController.getBookedDates);
 exports.default = router;
 //# sourceMappingURL=bookingRoutes.js.map

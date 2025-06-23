@@ -6,6 +6,8 @@ export { Tool } from "./Tool";
 export { ITool } from "../interfaces/tool.interface";
 export { Rental } from "./Rental";
 export { IRental } from "../interfaces/rental.interface";
+export { Booking } from "./Booking";
+export { IBooking } from "../interfaces/booking.interface";
 export { Review } from "./Review";
 export { IReview } from "../interfaces/review.interface";
 export { Category } from "./Category";
