@@ -333,14 +333,20 @@ export default function ToolCard({
 
       {/* Modal de réservation */}
       <AnimatePresence>
-        {isModalOpen && (
-          <BookingModal
-            isOpen={isModalOpen}
-            onClose={closeModal}
-            tool={tool}
-            bookedPeriods={bookedPeriods}
-          />
-        )}
+        {isModalOpen &&
+          (() => {
+            const key = tool.id ? `booking-modal-${tool.id}` : "";
+            console.log("ToolCard AnimatePresence BookingModal key:", key);
+            return (
+              <BookingModal
+                key={key}
+                isOpen={isModalOpen}
+                onClose={closeModal}
+                tool={tool}
+                bookedPeriods={bookedPeriods}
+              />
+            );
+          })()}
       </AnimatePresence>
 
       {/* Affichage des erreurs */}

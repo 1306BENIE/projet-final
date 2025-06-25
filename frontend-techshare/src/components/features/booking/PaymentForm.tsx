@@ -1,27 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { loadStripe } from "@stripe/stripe-js";
-import {
-  Elements,
-  CardElement,
-  useStripe,
-  useElements,
-} from "@stripe/react-stripe-js";
-import { X, CreditCard, Shield, AlertCircle } from "lucide-react";
+import React, { useState } from "react";
+import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { CreditCard, Shield, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { bookingService } from "@/services/bookingService";
-
-// Charger Stripe avec la clé publique
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || "");
-
-interface PaymentModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  bookingId: string;
-  amount: number;
-  onPaymentSuccess: () => void;
-  onPaymentError: (error: string) => void;
-}
 
 interface PaymentFormProps {
   amount: number;
@@ -32,7 +13,7 @@ interface PaymentFormProps {
   currency?: string;
 }
 
-const PaymentForm: React.FC<PaymentFormProps> = ({
+const StripePaymentForm: React.FC<PaymentFormProps> = ({
   amount,
   onSuccess,
   onError,
@@ -182,106 +163,4 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   );
 };
 
-export const PaymentModal: React.FC<PaymentModalProps> = ({
-  isOpen,
-  onClose,
-  bookingId,
-  amount,
-  onPaymentSuccess,
-  onPaymentError,
-}) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Utiliser useCallback pour stabiliser la fonction
-  const loadPaymentIntent = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Je supprime la ligne :
-      // const response = await bookingService.getPaymentIntent(bookingId);
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Erreur inconnue";
-      setError(errorMessage);
-      onPaymentError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [onPaymentError]);
-
-  useEffect(() => {
-    if (isOpen && bookingId) {
-      loadPaymentIntent();
-    }
-  }, [isOpen, bookingId, loadPaymentIntent]);
-
-  const handlePaymentSuccess = () => {
-    onPaymentSuccess();
-    onClose();
-  };
-
-  const handlePaymentError = (error: string) => {
-    onPaymentError(error);
-  };
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-          onClick={onClose}
-        >
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Paiement de la réservation
-              </h2>
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-              </div>
-            ) : error ? (
-              <div className="text-center py-8">
-                <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                <p className="text-red-600 mb-4">{error}</p>
-                <Button onClick={loadPaymentIntent} variant="outline">
-                  Réessayer
-                </Button>
-              </div>
-            ) : (
-              <Elements stripe={stripePromise}>
-                <PaymentForm
-                  amount={amount}
-                  onSuccess={handlePaymentSuccess}
-                  onError={handlePaymentError}
-                  onCancel={onClose}
-                  bookingId={bookingId}
-                  currency="xof"
-                />
-              </Elements>
-            )}
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-};
+export const PaymentForm = StripePaymentForm;

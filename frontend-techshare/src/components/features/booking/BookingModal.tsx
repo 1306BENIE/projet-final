@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/Button";
 import { Tool } from "@/interfaces/tools/tool";
 import { CreateBookingDto } from "@/interfaces/booking/dto.interface";
 import { ContractModal } from "@/components/features/booking/ContractModal";
-import { PaymentModal } from "@/components/features/booking/PaymentModal";
-import { usePayment } from "@/hooks/usePayment";
 import { fr } from "date-fns/locale";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { useNavigate } from "react-router-dom";
+import { bookingService } from "@/services/bookingService";
 
 registerLocale("fr", fr);
 
@@ -181,16 +181,7 @@ export const BookingModal = ({
   const [error, setError] = useState<string | null>(null);
   const [dateError, setDateError] = useState<string | null>(null);
 
-  // Hook pour gérer le paiement
-  const {
-    isPaymentModalOpen,
-    currentBookingId,
-    currentAmount,
-    closePaymentModal,
-    handlePaymentSuccess,
-    handlePaymentError,
-    createBookingWithPayment,
-  } = usePayment();
+  const navigate = useNavigate();
 
   // Valeur par défaut pour éviter undefined
   const safeBookedPeriods = bookedPeriods || [];
@@ -305,13 +296,11 @@ export const BookingModal = ({
       console.log("Sending booking data:", bookingData);
 
       // Utiliser la nouvelle méthode avec paiement
-      const success = await createBookingWithPayment(bookingData);
-
-      if (success) {
-        // Le modal de paiement s'ouvrira automatiquement si nécessaire
-        // ou on affichera un message de succès
+      const result = await bookingService.createBookingWithPayment(bookingData);
+      if (result && result.booking && result.booking.id) {
         onClose();
-        // Ne pas naviguer automatiquement, laisser l'utilisateur gérer le paiement
+        navigate(`/payment/${result.booking.id}`);
+        return;
       }
     } catch (error) {
       console.error("Booking error:", error);
@@ -342,15 +331,6 @@ export const BookingModal = ({
       }))
     : [];
 
-  // Affichage du PaymentModal après la création de la réservation
-  console.log(
-    "BookingModal: isPaymentModalOpen",
-    isPaymentModalOpen,
-    "currentBookingId",
-    currentBookingId,
-    "currentAmount",
-    currentAmount
-  );
   return (
     <AnimatePresence>
       {isOpen && (
@@ -402,37 +382,61 @@ export const BookingModal = ({
             </div>
 
             {/* Bloc d'alerte périodes réservées - design pro */}
-            {safeBookedPeriods.length > 0 && (
-              <div className="mb-4 flex items-start gap-3 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-xl shadow-sm">
-                <Clock className="w-6 h-6 text-blue-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-semibold text-blue-900 mb-1">
-                    {calculateNextAvailableSlot(safeBookedPeriods)?.message}
-                  </div>
-                  <p className="text-blue-700 text-sm">
-                    {safeBookedPeriods.length} réservation
-                    {safeBookedPeriods.length > 1 ? "s" : ""} active
-                    {safeBookedPeriods.length > 1 ? "s" : ""} en cours
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Message quand aucune réservation active */}
-            {safeBookedPeriods.length === 0 && (
-              <div className="mb-4 flex items-start gap-3 p-4 bg-green-50 border-l-4 border-green-400 rounded-xl shadow-sm">
-                <Clock className="w-6 h-6 text-green-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-semibold text-green-900 mb-1">
-                    Outil disponible
-                  </div>
-                  <p className="text-green-700 text-sm">
-                    Aucune réservation active - vous pouvez réserver dès
-                    maintenant
-                  </p>
-                </div>
-              </div>
-            )}
+            <AnimatePresence>
+              {safeBookedPeriods.length > 0
+                ? (() => {
+                    const key = "reserved-periods-alert";
+                    console.log(
+                      "ReservedPeriods AnimatePresence child key:",
+                      key
+                    );
+                    return (
+                      <div
+                        key={key}
+                        className="mb-4 flex items-start gap-3 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-xl shadow-sm"
+                      >
+                        <Clock className="w-6 h-6 text-blue-500 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="font-semibold text-blue-900 mb-1">
+                            {
+                              calculateNextAvailableSlot(safeBookedPeriods)
+                                ?.message
+                            }
+                          </div>
+                          <p className="text-blue-700 text-sm">
+                            {safeBookedPeriods.length} réservation
+                            {safeBookedPeriods.length > 1 ? "s" : ""} active
+                            {safeBookedPeriods.length > 1 ? "s" : ""} en cours
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()
+                : (() => {
+                    const key = "no-reservation-alert";
+                    console.log(
+                      "NoReservation AnimatePresence child key:",
+                      key
+                    );
+                    return (
+                      <div
+                        key={key}
+                        className="mb-4 flex items-start gap-3 p-4 bg-green-50 border-l-4 border-green-400 rounded-xl shadow-sm"
+                      >
+                        <Clock className="w-6 h-6 text-green-500 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <div className="font-semibold text-green-900 mb-1">
+                            Outil disponible
+                          </div>
+                          <p className="text-green-700 text-sm">
+                            Aucune réservation active - vous pouvez réserver dès
+                            maintenant
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+            </AnimatePresence>
 
             {/* Formulaire */}
             <form onSubmit={handleSubmit} className="p-4">
@@ -478,52 +482,64 @@ export const BookingModal = ({
 
                   {/* Récapitulatif (Apparition animée) */}
                   <AnimatePresence>
-                    {startDate && endDate && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0, y: -10 }}
-                        animate={{ opacity: 1, height: "auto", y: 0 }}
-                        exit={{ opacity: 0, height: 0, y: -10 }}
-                        transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className="bg-white rounded-md p-4 border border-gray-300 mt-4 overflow-hidden"
-                      >
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Durée</span>
-                            <span className="font-medium text-blue-700">
-                              <AnimatedNumber
-                                value={differenceInDays(
-                                  new Date(endDate),
-                                  new Date(startDate)
-                                )}
-                              />{" "}
-                              jours
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Caution</span>
-                            <span className="font-medium text-blue-700">
-                              {tool.caution?.toLocaleString() || 0} FCFA
-                            </span>
-                          </div>
-                          <div className="border-t-2 border-gray-200 pt-2 mt-2">
-                            <div className="flex justify-between font-bold text-base">
-                              <span>Total</span>
-                              <span className="text-blue-700">
-                                <AnimatedNumber
-                                  value={
-                                    differenceInDays(
-                                      new Date(endDate),
-                                      new Date(startDate)
-                                    ) * tool.dailyPrice
-                                  }
-                                  formatAsCurrency={true}
-                                />
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
+                    {startDate && endDate
+                      ? (() => {
+                          const key = "recap-animated";
+                          console.log("Recap AnimatePresence child key:", key);
+                          return (
+                            <motion.div
+                              key={key}
+                              initial={{ opacity: 0, height: 0, y: -10 }}
+                              animate={{ opacity: 1, height: "auto", y: 0 }}
+                              exit={{ opacity: 0, height: 0, y: -10 }}
+                              transition={{ duration: 0.3, ease: "easeInOut" }}
+                              className="bg-white rounded-md p-4 border border-gray-300 mt-4 overflow-hidden"
+                            >
+                              <div className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600">Durée</span>
+                                  <span className="font-medium text-blue-700">
+                                    <AnimatedNumber
+                                      value={differenceInDays(
+                                        new Date(endDate),
+                                        new Date(startDate)
+                                      )}
+                                    />{" "}
+                                    jours
+                                  </span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600">Caution</span>
+                                  <span className="font-medium text-blue-700">
+                                    {tool.caution?.toLocaleString() || 0} FCFA
+                                  </span>
+                                </div>
+                                <div className="border-t-2 border-gray-200 pt-2 mt-2">
+                                  <div className="flex justify-between font-bold text-base">
+                                    <span>Total</span>
+                                    <span className="text-blue-700">
+                                      <AnimatedNumber
+                                        value={
+                                          differenceInDays(
+                                            new Date(endDate),
+                                            new Date(startDate)
+                                          ) * tool.dailyPrice
+                                        }
+                                        formatAsCurrency={true}
+                                      />
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          );
+                        })()
+                      : (() => {
+                          console.log(
+                            "Recap AnimatePresence: no child rendered"
+                          );
+                          return null;
+                        })()}
                   </AnimatePresence>
                 </div>
 
@@ -600,26 +616,26 @@ export const BookingModal = ({
       )}
 
       {/* Modal du contrat */}
-      <ContractModal
-        isOpen={showContract}
-        onClose={() => setShowContract(false)}
-        tool={tool}
-        startDate={startDate ? format(startDate, "yyyy-MM-dd") : ""}
-        endDate={endDate ? format(endDate, "yyyy-MM-dd") : ""}
-      />
-
-      {/* Modal de paiement */}
       <AnimatePresence>
-        {isPaymentModalOpen && currentBookingId && (
-          <PaymentModal
-            isOpen={isPaymentModalOpen}
-            onClose={closePaymentModal}
-            bookingId={currentBookingId}
-            amount={currentAmount}
-            onPaymentSuccess={handlePaymentSuccess}
-            onPaymentError={handlePaymentError}
-          />
-        )}
+        {showContract
+          ? (() => {
+              const key = "contract-modal";
+              console.log("ContractModal AnimatePresence child key:", key);
+              return (
+                <ContractModal
+                  key={key}
+                  isOpen={showContract}
+                  onClose={() => setShowContract(false)}
+                  tool={tool}
+                  startDate={startDate ? format(startDate, "yyyy-MM-dd") : ""}
+                  endDate={endDate ? format(endDate, "yyyy-MM-dd") : ""}
+                />
+              );
+            })()
+          : (() => {
+              console.log("ContractModal AnimatePresence: no child rendered");
+              return null;
+            })()}
       </AnimatePresence>
     </AnimatePresence>
   );
