@@ -12,6 +12,14 @@ export enum PaymentStatus {
   FAILED = "FAILED",
 }
 
+export interface ToolLite {
+  name: string;
+  images?: string[];
+  brand?: string;
+  modelName?: string;
+  caution?: number;
+}
+
 /**
  * Interface representing a booking in the system
  */
@@ -48,4 +56,7 @@ export interface Booking {
 
   /** Optional notes about the booking */
   notes?: string;
+
+  tool?: ToolLite;
+  toolName?: string;
 }

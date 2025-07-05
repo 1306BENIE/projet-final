@@ -25,7 +25,7 @@ import { bookingService } from "@/services/bookingService";
 import { toolService } from "@/services/toolService";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { BookingCardSkeleton } from "@/components/features/booking/BookingCardSkeleton";
+import { BookingCardSkeleton } from "@/components/skeletons/BookingCardSkeleton";
 
 type SortField = "date" | "price" | "status";
 type SortOrder = "asc" | "desc";

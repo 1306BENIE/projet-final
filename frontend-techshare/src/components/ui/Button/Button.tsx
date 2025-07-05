@@ -11,8 +11,6 @@ export interface ButtonProps extends HTMLMotionProps<"button"> {
   size?: ButtonSize;
   fullWidth?: boolean;
   isLoading?: boolean;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -27,8 +25,6 @@ export const Button: React.FC<ButtonProps> = ({
   size = "md",
   fullWidth = false,
   isLoading = false,
-  leftIcon,
-  rightIcon,
   children,
   className = "",
   disabled,
@@ -51,19 +47,8 @@ export const Button: React.FC<ButtonProps> = ({
       aria-disabled={disabled || isLoading}
       {...props}
     >
-      {isLoading ? (
-        <Loader2 className="animate-spin w-5 h-5" />
-      ) : (
-        <>
-          {leftIcon && (
-            <span className="mr-1 flex items-center">{leftIcon}</span>
-          )}
-          <span>{children}</span>
-          {rightIcon && (
-            <span className="ml-1 flex items-center">{rightIcon}</span>
-          )}
-        </>
-      )}
+      {isLoading && <Loader2 className="animate-spin w-5 h-5 mr-2" />}
+      <span>{children}</span>
     </motion.button>
   );
 };

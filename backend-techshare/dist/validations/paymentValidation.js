@@ -12,9 +12,9 @@ exports.createPaymentIntentSchema = joi_1.default.object({
         "number.min": "Le montant doit être supérieur à 0",
         "any.required": "Le montant est requis",
     }),
-    currency: joi_1.default.string().default("eur").valid("eur", "usd").messages({
+    currency: joi_1.default.string().default("xof").valid("eur", "usd", "xof").messages({
         "string.base": "La devise doit être une chaîne de caractères",
-        "any.only": "La devise doit être 'eur' ou 'usd'",
+        "any.only": "La devise doit être 'eur', 'usd' ou 'xof' (FCFA)",
     }),
     rentalId: joi_1.default.string().required().messages({
         "string.empty": "L'ID de la location est requis",

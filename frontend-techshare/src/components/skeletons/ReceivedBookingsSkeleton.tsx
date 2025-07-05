@@ -1,4 +1,4 @@
-import { ReceivedBookingCardSkeleton } from "@/components/features/booking/ReceivedBookingCardSkeleton";
+import { ReceivedBookingCardSkeleton } from "./ReceivedBookingCardSkeleton";
 
 export const ReceivedBookingsSkeleton = () => {
   return (

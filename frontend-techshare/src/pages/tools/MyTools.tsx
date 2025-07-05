@@ -5,7 +5,7 @@ import { Tool } from "@/interfaces/tools/tool";
 import { toolService } from "@/services/toolService";
 import { useNavigate } from "react-router-dom";
 import ToolCard from "@/components/features/tools/ToolCard";
-import SkeletonToolCard from "@/components/home/SkeletonToolCard";
+import SkeletonToolCard from "@/components/skeletons/SkeletonToolCard";
 
 export default function MyTools() {
   const [tools, setTools] = useState<Tool[]>([]);
@@ -133,7 +133,7 @@ export default function MyTools() {
               <h1 className="text-4xl font-bold text-gray-900 mb-2">
                 Mes outils
               </h1>
-      <p className="text-gray-600">
+              <p className="text-gray-600">
                 Gérez vos outils technologiques partagés
               </p>
             </div>

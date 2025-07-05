@@ -19,14 +19,25 @@ exports.paymentController = {
     // Create payment intent
     async createPaymentIntent(req, res, next) {
         try {
+            logger_1.logger.info("[Paiement] Body reçu:", JSON.stringify(req.body));
+            logger_1.logger.info("[Paiement] Devise reçue:", req.body.currency);
             if (!req.user?.userId) {
                 throw new errors_1.AuthenticationError("Non autorisé");
             }
-            const { rentalId } = req.body;
+            const { rentalId, amount, currency, paymentMethodId } = req.body;
+            logger_1.logger.info("[Paiement] Champs reçus:", {
+                rentalId,
+                amount,
+                currency,
+                paymentMethodId,
+            });
+            // Log de debug pour l'ID reçu
+            logger_1.logger.info("[Paiement] rentalId reçu:", rentalId);
             if (!rentalId) {
                 throw new errors_1.ValidationError("L'ID de la réservation est requis");
             }
             const booking = await models_1.Booking.findById(rentalId).populate("tool");
+            logger_1.logger.info("[Paiement] Booking trouvé:", booking);
             if (!booking) {
                 throw new errors_1.DatabaseError("Réservation non trouvée");
             }
@@ -56,6 +67,7 @@ exports.paymentController = {
             res.status(201).json(response);
         }
         catch (error) {
+            logger_1.logger.error("[Paiement] Erreur dans createPaymentIntent:", error);
             next(error);
         }
     },

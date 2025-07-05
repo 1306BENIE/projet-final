@@ -48,6 +48,9 @@ const createBooking = async (req, res, next) => {
             message,
         });
         await booking.save();
+        // Logs avancés pour le debug
+        logger_1.logger.info("[Booking] Booking créé (objet complet):", JSON.stringify(booking));
+        logger_1.logger.info("[Booking] Booking créé avec _id (direct):", booking._id);
         // Add notification
         booking.addNotification("status_change", "New booking request received");
         res.status(201).json({
@@ -247,10 +250,14 @@ const getBookingById = async (req, res) => {
     try {
         const bookingId = req.params.id;
         const userId = req.user?.userId;
+        console.log("[getBookingById] bookingId:", bookingId);
+        console.log("[getBookingById] userId:", userId);
         if (!userId || !mongoose_1.Types.ObjectId.isValid(userId)) {
+            console.log("[getBookingById] Invalid user ID");
             return res.status(400).json({ message: "Invalid user ID" });
         }
         if (!bookingId || !mongoose_1.Types.ObjectId.isValid(bookingId)) {
+            console.log("[getBookingById] Invalid booking ID");
             return res.status(400).json({ message: "Invalid booking ID" });
         }
         const bookingObjectId = new mongoose_1.Types.ObjectId(bookingId);
@@ -259,31 +266,47 @@ const getBookingById = async (req, res) => {
             .populate("renter", "firstName lastName email")
             .populate("owner", "firstName lastName email");
         if (!booking) {
+            console.log("[getBookingById] Booking not found");
             return res.status(404).json({ message: "Booking not found" });
         }
         // Check if user is authorized to view this booking
-        console.log("Checking authorization...");
-        console.log("User ID:", userId);
-        console.log("Booking renter ID:", booking.renter.toString());
-        console.log("Booking owner ID:", booking.owner.toString());
-        // Extract the actual ObjectId from populated objects
         const renterId = typeof booking.renter === "object" && booking.renter._id
             ? booking.renter._id.toString()
             : booking.renter.toString();
         const ownerId = typeof booking.owner === "object" && booking.owner._id
             ? booking.owner._id.toString()
             : booking.owner.toString();
-        console.log("Extracted renter ID:", renterId);
-        console.log("Extracted owner ID:", ownerId);
-        console.log("Is user renter?", renterId === userId);
-        console.log("Is user owner?", ownerId === userId);
+        console.log("[getBookingById] Extracted renterId:", renterId);
+        console.log("[getBookingById] Extracted ownerId:", ownerId);
+        console.log("[getBookingById] Is user renter?", renterId === userId);
+        console.log("[getBookingById] Is user owner?", ownerId === userId);
         if (renterId !== userId && ownerId !== userId) {
-            console.log("User not authorized");
+            console.log("[getBookingById] User not authorized (403)");
             return res.status(403).json({ message: "Not authorized" });
         }
-        res.json(booking);
+        console.log("[getBookingById] Booking found and user authorized, sending booking.");
+        // Mapping pour renvoyer un objet Booking "plat" conforme à l'interface frontend
+        const bookingResponse = {
+            id: booking._id.toString(),
+            userId: typeof booking.renter === "object" && booking.renter
+                ? booking.renter._id.toString()
+                : booking.renter.toString(),
+            toolId: typeof booking.tool === "object" && booking.tool
+                ? booking.tool._id.toString()
+                : booking.tool.toString(),
+            startDate: booking.startDate,
+            endDate: booking.endDate,
+            status: booking.status,
+            totalPrice: booking.totalPrice,
+            createdAt: booking.createdAt,
+            updatedAt: booking.updatedAt,
+            paymentStatus: booking.paymentStatus,
+            notes: booking.message || "",
+        };
+        res.json(bookingResponse);
     }
     catch (error) {
+        console.error("[getBookingById] Internal server error:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 };

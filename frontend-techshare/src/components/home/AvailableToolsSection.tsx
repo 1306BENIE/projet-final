@@ -1,5 +1,5 @@
 import ToolCard from "./ToolCard";
-import SkeletonToolCard from "./SkeletonToolCard";
+import SkeletonToolCard from "@/components/skeletons/SkeletonToolCard";
 import { Link } from "react-router-dom";
 import { Search } from "lucide-react";
 import { useState, useEffect } from "react";

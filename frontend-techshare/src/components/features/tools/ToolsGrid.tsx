@@ -1,5 +1,5 @@
 import ToolCard from "@/components/features/tools/ToolCard";
-import SkeletonToolCard from "@/components/home/SkeletonToolCard";
+import SkeletonToolCard from "@/components/skeletons/SkeletonToolCard";
 import type { ToolsGridProps } from "@/interfaces/tools/tools";
 
 export default function ToolsGrid({ loading, tools }: ToolsGridProps) {

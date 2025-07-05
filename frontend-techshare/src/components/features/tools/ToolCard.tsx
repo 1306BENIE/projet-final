@@ -227,6 +227,12 @@ export default function ToolCard({
               <p className="text-gray-700 text-sm mb-4 flex-1 line-clamp-2 min-h-[40px]">
                 {tool.description}
               </p>
+              {/* Affichage de la caution juste après la description */}
+              <div className="flex items-center gap-2 mb-2">
+                <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-medium">
+                  Caution : {tool.caution?.toLocaleString() || 0} FCFA
+                </span>
+              </div>
               <div className="flex items-center justify-between pt-4 border-t border-gray-100 gap-2 min-w-0">
                 <div className="flex items-center gap-2 text-sm text-gray-600 min-w-0 flex-1">
                   <MapPin className="w-4 h-4 flex-shrink-0 text-cyan-600" />

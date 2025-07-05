@@ -134,23 +134,23 @@ const StripePaymentForm: React.FC<PaymentFormProps> = ({
         </div>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 mt-2">
         <Button
           type="button"
           variant="outline"
           onClick={onCancel}
           disabled={isProcessing}
-          className="flex-1"
+          className="flex-1 py-1 rounded-lg border border-black text-black font-semibold hover:bg-gray-100 transition text-center whitespace-nowrap"
         >
           Annuler
         </Button>
         <Button
           type="submit"
           disabled={!stripe || isProcessing}
-          className="flex-1"
+          className="flex-1 py-1 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition text-center whitespace-nowrap"
         >
           {isProcessing ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 justify-center">
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               Traitement...
             </div>

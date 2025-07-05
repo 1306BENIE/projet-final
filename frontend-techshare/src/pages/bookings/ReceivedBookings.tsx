@@ -5,7 +5,7 @@ import { useReceivedBookings } from "@/hooks/useReceivedBookings";
 import { ReceivedBookingsList } from "@/components/features/booking/ReceivedBookingsList";
 import { ReceivedBookingModal } from "@/components/features/booking/ReceivedBookingModal";
 import { ReceivedBooking } from "@/interfaces/booking/received-booking.interface";
-import { ReceivedBookingsSkeleton } from "@/components/features/booking/ReceivedBookingsSkeleton";
+import { ReceivedBookingsSkeleton } from "@/components/skeletons/ReceivedBookingsSkeleton";
 
 export default function ReceivedBookings() {
   const {
