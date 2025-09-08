@@ -31,12 +31,38 @@ const app = (0, express_1.default)();
 // Configuration de sécurité
 app.use((0, helmet_1.default)());
 // Configuration CORS
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://projet-final-rgb0l9w6v-benies-projects-e2ceedb8.vercel.app",
+    process.env.FRONTEND_URL,
+    process.env.CORS_ORIGIN
+].filter(Boolean);
 app.use((0, cors_1.default)({
-    origin: process.env.CORS_ORIGIN || "*",
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    origin: (origin, callback) => {
+        // Permettre les requêtes sans origin (mobile apps, etc.)
+        if (!origin)
+            return callback(null, true);
+        // Vérifier si l'origin est dans la liste autorisée
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        // En développement, permettre tous les origins localhost
+        if (process.env.NODE_ENV === "development" && origin.includes("localhost")) {
+            return callback(null, true);
+        }
+        // Permettre les domaines Vercel en production
+        if (origin.includes("vercel.app") || origin.includes("benies-projects")) {
+            return callback(null, true);
+        }
+        callback(new Error("Non autorisé par la politique CORS"));
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
     credentials: true,
     maxAge: 86400, // 24 heures
+    preflightContinue: false,
+    optionsSuccessStatus: 204
 }));
 // Middleware de base
 app.use(express_1.default.json({ limit: "10mb" })); // Limite la taille des requêtes JSON
